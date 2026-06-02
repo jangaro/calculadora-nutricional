@@ -439,35 +439,74 @@
             document.getElementById('cantidad').value = 100;
         });
 
-        // Función para renderizar los cambios en la pantalla
-        async function actualizarInterfaz(guardar = true) {
+        // --- FUNCIÓN DE INTERFAZ Y GUARDADO CON DETECTOR DE ERRORES ---
+        async function actualizarInterfaz(guardarEnSupabase = false) {
+            // 1. Pintamos los datos en la pantalla
             document.getElementById('txt-cal').innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
             document.getElementById('txt-prot').innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
 
             const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
             const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-            document.getElementById('fill-cal').style.width = `${pctCal}%`;
-            document.getElementById('fill-prot').style.width = `${pctProt}%`;
+            document.getElementById('bar-cal').style.width = `${pctCal}%`;
+            document.getElementById('bar-prot').style.width = `${pctProt}%`;
 
-            if (guardar) {
-                const logDia = {
-                    consumidoCalorias: consumidoCalorias,
-                    consumidoProteinas: consumidoProteinas,
-                    alimentosConsumidos: alimentosConsumidos
-                };
-                localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
+            // Pintamos la lista de alimentos en el HTML
+            const lista = document.getElementById('lista-alimentos');
+            lista.innerHTML = '';
+            alimentosConsumidos.forEach((alimento, index) => {
+                const li = document.createElement('li');
+                li.className = 'alimento-item';
+                li.innerHTML = `
+                    <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
+                    <button class="delete-btn" onclick="eliminarAlimento(${index})">❌</button>
+                `;
+                lista.appendChild(li);
+            });
 
-                // Sincronizar en la nube si está conectado
-                if (isSupabaseConfigured) {
+            // 2. Guardado en LocalStorage (copia de seguridad local)
+            const logDia = {
+                consumidoCalorias: consumidoCalorias,
+                consumidoProteinas: consumidoProteinas,
+                alimentosConsumidos: alimentosConsumidos
+            };
+            localStorage.setItem(`nutricalc_${fechaSeleccionada}`, JSON.stringify(logDia));
+
+            // 3. ¡EL DETECTOR DE ERRORES DE SUPABASE!
+            if (guardarEnSupabase && isSupabaseConfigured) {
+                console.log("🕵️‍♂️ Detective: Intentando guardar en Supabase...");
+                try {
                     const { data: s } = await supabaseClient.auth.getSession();
-                    if (s && s.session) {
-                        await syncLogToCloud(s.session.user.id, fechaSeleccionada, logDia);
+                    if (!s || !s.session) {
+                        console.error("❌ Error: No se guarda en la nube porque NO hay un usuario logueado en este navegador.");
+                        return;
                     }
+
+                    const userId = s.session.user.id;
+                    console.log("🕵️‍♂️ Detective: Usuario detectado con ID:", userId);
+                    console.log("🕵️‍♂️ Detective: Guardando para la fecha:", fechaSeleccionada);
+
+                    // Guardamos o actualizamos en la base de datos
+                    const { error } = await supabaseClient
+                        .from('registros_diarios')
+                        .upsert({
+                            user_id: userId,
+                            fecha: fechaSeleccionada,
+                            consumido_calorias: consumidoCalorias,
+                            consumido_proteinas: consumidoProteinas,
+                            alimentos_consumidos: alimentosConsumidos,
+                            updated_at: new Date()
+                        }, { onConflict: 'user_id,fecha' });
+
+                    if (error) {
+                        console.error("❌ Error real de Supabase al guardar:", error.message, error.details);
+                    } else {
+                        console.log("✅ ¡ÉXITO! Datos guardados correctamente en la tabla registros_diarios.");
+                    }
+                } catch (err) {
+                    console.error("❌ Error inesperado en el código de guardado:", err);
                 }
             }
-
-            renderizarAlimentosConsumidos();
         }
 
         function renderizarAlimentosConsumidos() {
