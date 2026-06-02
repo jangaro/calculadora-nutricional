@@ -404,8 +404,8 @@
             }
         });
 
-        // Al añadir un alimento
-        alimentoForm.addEventListener('submit', (e) => {
+      // Al añadir un alimento (CÓDIGO CORREGIDO)
+        alimentoForm.addEventListener('submit', async (e) => { // <-- Le añadimos 'async' aquí delante
             e.preventDefault();
 
             const alimentoSelect = document.getElementById('alimento');
@@ -432,7 +432,11 @@
                 proteinas: protCalculadas
             });
 
-            actualizarInterfaz();
+            // Forzamos a la interfaz a guardar en LocalStorage y Supabase pasándole 'true'
+            await actualizarInterfaz(true); 
+            
+            // Limpiamos el buscador y la cantidad para poder meter otro alimento cómodamente
+            document.getElementById('cantidad').value = 100;
         });
 
         // Función para renderizar los cambios en la pantalla
