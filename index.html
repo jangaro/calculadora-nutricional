@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriCalc - Calculadora de Calorías y Proteínas</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Enlace a estilos externos -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Supabase SDK y Configuración -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Indicador de Usuario Logueado (Sincronización en la nube) -->
+        <div id="user-badge" class="user-badge-container" style="display: none;">
+            <div class="user-info">
+                Conectado como: <span id="user-email-text" class="user-email">cargando...</span>
+            </div>
+            <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
+
+        <!-- Bloque de Autenticación (se muestra si no está logueado y Supabase está configurado) -->
+        <div id="auth-section" class="auth-container" style="display: none;">
+            <div class="auth-card">
+                <h2 id="auth-title">Iniciar Sesión</h2>
+                <p id="auth-subtitle">Accede para guardar y sincronizar tus datos en la nube</p>
+                
+                <div class="auth-tabs">
+                    <button type="button" id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Ingresar</button>
+                    <button type="button" id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Registrarse</button>
+                </div>
+
+                <div id="auth-error-msg" class="auth-error" style="display: none;"></div>
+
+                <form id="auth-form">
+                    <div class="form-group">
+                        <label for="auth-email">Correo Electrónico:</label>
+                        <input type="email" id="auth-email" placeholder="ejemplo@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="auth-password">Contraseña (mín. 6 caracteres):</label>
+                        <input type="password" id="auth-password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" id="auth-submit-btn" class="btn-blue">Entrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Contenido principal de la calculadora -->
+        <div id="app-section" style="display: none;">
+            <!-- Banner de aviso de modo local -->
+            <div id="local-mode-banner" class="auth-error" style="display: none; background-color: #fef08a; color: #854d0e; border-color: #fef08a; margin-bottom: 20px;">
+                ⚠️ <strong>Modo Local Offline:</strong> Para sincronizar tus datos en la nube, configura tus credenciales de Supabase en <code>supabase-config.js</code>.
+            </div>
+
+            <header>
+                <h1>NutriCalc 📊</h1>
+                <p>Calculadora diaria de calorías y proteínas</p>
+                <div class="date-selector-container">
+                    <label for="fecha-registro">Día Seleccionado:</label>
+                    <input type="date" id="fecha-registro">
+                </div>
+                <div class="header-actions" style="margin-top: 15px; margin-bottom: 0; text-align: center;">
+                    <a href="tendencias.html" class="nav-link">📊 Tendencias Semanales</a>
+                </div>
+            </header>
+
+            <main class="grid-layout">
+                <div class="column">
+                    <section style="margin-bottom: 25px;">
+                        <h2>1. Tus Datos</h2>
+                        <form id="perfil-form">
+                            <div class="form-group">
+                                <label for="peso">Peso (kg):</label>
+                                <input type="number" id="peso" value="70" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="objetivo-cal">Meta Calorías (kcal):</label>
+                                <input type="number" id="objetivo-cal" value="2000" required>
+                            </div>
+                            <button type="submit">Actualizar Objetivos</button>
+                        </form>
+                    </section>
+
+                    <section>
+                        <h2>
+                            <span>2. Registrar Alimento</span>
+                            <a href="nuevo-alimento.html" class="nav-link">+ Crear Alimento</a>
+                        </h2>
+                        <form id="alimento-form">
+                            <div class="form-group">
+                                <label for="buscador-alimento">Buscar Alimento:</label>
+                                <input type="text" id="buscador-alimento" placeholder="Escribe para buscar...">
+                            </div>
+                            <div class="form-group">
+                                <label for="alimento">Alimento:</label>
+                                <select id="alimento">
+                                    <!-- Se carga dinámicamente desde JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cantidad">Cantidad (gramos):</label>
+                                <input type="number" id="cantidad" value="100" min="1" required>
+                            </div>
+                            <button type="submit" class="btn-blue">Añadir al Plato</button>
+                        </form>
+                    </section>
+                </div>
+
+                <div class="column" style="display: flex; flex-direction: column; gap: 20px;">
+                    <section>
+                        <h2>3. Estado del Día</h2>
+
+                        <div class="progress-container">
+                            <div class="counter-text">
+                                <span>Calorías:</span>
+                                <span id="txt-cal">0 / 2000 kcal</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="fill-cal" class="progress-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="counter-text">
+                                <span>Proteínas (2g/kg):</span>
+                                <span id="txt-prot">0 / 140 g</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="fill-prot" class="progress-fill"></div>
+                            </div>
+                        </div>
+
+                        <button onclick="reiniciarDia()" class="btn-red" style="margin-top: 15px;">Reiniciar Día</button>
+                    </section>
+
+                    <section style="flex-grow: 1;">
+                        <h2>4. Alimentos de Hoy</h2>
+                        <div id="lista-consumidos" class="food-list" style="max-height: 250px;">
+                            <!-- Cargado dinámicamente desde JS -->
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Determinar si Supabase está correctamente configurado
+        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && 
+                                     typeof SUPABASE_ANON_KEY !== 'undefined' && 
+                                     SUPABASE_URL !== "TU_SUPABASE_URL" && 
+                                     SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" && 
+                                     supabaseClient !== null;
+
+        // Variables de estado (valores de caché en memoria)
+        let peso = parseFloat(localStorage.getItem('peso')) || 70;
+        let metaCalorias = parseFloat(localStorage.getItem('metaCalorias')) || 2000;
+        let metaProteinas = parseFloat(localStorage.getItem('metaProteinas')) || 140;
+
+        let consumidoCalorias = 0;
+        let consumidoProteinas = 0;
+        let alimentosConsumidos = [];
+        let todosLosAlimentosGlobal = [];
+
+        let fechaSeleccionada = "";
+        let fechaHoy = "";
+        let authMode = "login";
+
+        // Elementos del DOM
+        const perfilForm = document.getElementById('perfil-form');
+        const alimentoForm = document.getElementById('alimento-form');
+        const fechaInput = document.getElementById('fecha-registro');
+        const authForm = document.getElementById('auth-form');
+
+        // Inicializar campos de entrada con los valores por defecto
+        document.getElementById('peso').value = peso;
+        document.getElementById('objetivo-cal').value = metaCalorias;
+
+        // --- Gestión de Autenticación con Supabase ---
+
+        window.switchAuthTab = function(mode) {
+            authMode = mode;
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const tabLogin = document.getElementById('tab-login');
+            const tabSignup = document.getElementById('tab-signup');
+            
+            if (mode === "login") {
+                title.textContent = "Iniciar Sesión";
+                subtitle.textContent = "Accede para guardar y sincronizar tus datos en la nube";
+                submitBtn.textContent = "Entrar";
+                tabLogin.classList.add('active');
+                tabSignup.classList.remove('active');
+            } else {
+                title.textContent = "Registrarse";
+                subtitle.textContent = "Crea una cuenta para guardar tus consumos en la nube";
+                submitBtn.textContent = "Registrar Cuenta";
+                tabLogin.classList.remove('active');
+                tabSignup.classList.add('active');
+            }
+        }
+
+        if (isSupabaseConfigured) {
+            // Escuchar cambios de estado en la autenticación
+            supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                if (session) {
+                    document.getElementById('auth-section').style.display = 'none';
+                    document.getElementById('app-section').style.display = 'block';
+                    document.getElementById('user-badge').style.display = 'flex';
+                    document.getElementById('user-email-text').textContent = session.user.email;
+                    
+                    // Cargar y sincronizar datos de Supabase
+                    await inicializarDatosDesdeSupabase(session.user.id);
+                } else {
+                    document.getElementById('auth-section').style.display = 'flex';
+                    document.getElementById('app-section').style.display = 'none';
+                    document.getElementById('user-badge').style.display = 'none';
+                    
+                    limpiarCachéLocal();
+                }
+            });
+        } else {
+            // Si Supabase no está configurado, trabajar en modo local sin auth
+            console.log("Supabase credentials not configured. Running in local-only offline mode.");
+            document.getElementById('app-section').style.display = 'block';
+            document.getElementById('local-mode-banner').style.display = 'block';
+            
+            // Cargar datos locales al iniciar
+            peso = parseFloat(localStorage.getItem('peso')) || 70;
+            metaCalorias = parseFloat(localStorage.getItem('metaCalorias')) || 2000;
+            metaProteinas = parseFloat(localStorage.getItem('metaProteinas')) || 140;
+            document.getElementById('peso').value = peso;
+            document.getElementById('objetivo-cal').value = metaCalorias;
+        }
+
+        // Registrar / Iniciar Sesión submit handler
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error-msg');
+            
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = "";
+
+            if (!isSupabaseConfigured) return;
+
+            try {
+                if (authMode === "login") {
+                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient.auth.signUp({ email, password });
+                    if (error) throw error;
+                    alert("¡Registro completado! Si Supabase requiere confirmación por correo electrónico, revisa tu bandeja de entrada.");
+                }
+            } catch (err) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = err.message || "Error al realizar la autenticación.";
+            }
+        });
+
+        window.cerrarSesion = async function() {
+            if (isSupabaseConfigured) {
+                await supabaseClient.auth.signOut();
+            }
+        }
+
+        function limpiarCachéLocal() {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('nutricalc_log_') || 
+                    key === 'alimentosConsumidos' || 
+                    key === 'alimentosPersonalizados' || 
+                    key === 'peso' || 
+                    key === 'metaCalorias' || 
+                    key === 'metaProteinas') {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            
+            peso = 70;
+            metaCalorias = 2000;
+            metaProteinas = 140;
+            consumidoCalorias = 0;
+            consumidoProteinas = 0;
+            alimentosConsumidos = [];
+            
+            document.getElementById('peso').value = peso;
+            document.getElementById('objetivo-cal').value = metaCalorias;
+            cargarAlimentos();
+            actualizarInterfaz(false);
+        }
+
+        // --- Carga y Sincronización de Datos ---
+
+        async function inicializarDatosDesdeSupabase(userId) {
+            // 1. Cargar Perfil de usuario (peso y metas)
+            const { data: perfil, error: errPerfil } = await supabaseClient
+                .from('perfiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            if (perfil) {
+                peso = Number(perfil.peso);
+                metaCalorias = Number(perfil.meta_calorias);
+                metaProteinas = Number(perfil.meta_proteinas);
+                
+                localStorage.setItem('peso', peso);
+                localStorage.setItem('metaCalorias', metaCalorias);
+                localStorage.setItem('metaProteinas', metaProteinas);
+                
+                document.getElementById('peso').value = peso;
+                document.getElementById('objetivo-cal').value = metaCalorias;
+            } else if (errPerfil && errPerfil.code === "PGRST116") {
+                // No existe perfil, lo creamos con valores actuales
+                await supabaseClient.from('perfiles').insert({
+                    id: userId,
+                    peso: peso,
+                    meta_calorias: metaCalorias,
+                    meta_proteinas: metaProteinas
+                });
+            }
+
+            // 2. Cargar Alimentos Personalizados
+            const { data: alimentosCloud } = await supabaseClient
+                .from('alimentos_personalizados')
+                .select('*')
+                .eq('user_id', userId);
+                
+            if (alimentosCloud) {
+                const personalizados = alimentosCloud.map(a => ({
+                    nombre: a.nombre,
+                    calorias: Number(a.calorias),
+                    proteinas: Number(a.proteinas)
+                }));
+                localStorage.setItem('alimentosPersonalizados', JSON.stringify(personalizados));
+            }
+
+            // Refrescar selector de alimentos
+            cargarAlimentos();
+
+            // 3. Cargar consumos del día seleccionado
+            await cargarDatosDeFecha(fechaSeleccionada);
+        }
+
+        async function syncLogToCloud(userId, fecha, logDia) {
+            await supabaseClient.from('registros_diarios').upsert({
+                user_id: userId,
+                fecha: fecha,
+                consumido_calorias: logDia.consumidoCalorias,
+                consumido_proteinas: logDia.consumidoProteinas,
+                alimentos_consumidos: logDia.alimentosConsumidos,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,fecha' });
+        }
+
+        // --- Lógica de la interfaz de la Calculadora ---
+
+        // Al actualizar el perfil
+        perfilForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            peso = parseFloat(document.getElementById('peso').value);
+            metaCalorias = parseFloat(document.getElementById('objetivo-cal').value);
+            metaProteinas = peso * 2; // Regla de 2g por kg de peso
+
+            localStorage.setItem('peso', peso);
+            localStorage.setItem('metaCalorias', metaCalorias);
+            localStorage.setItem('metaProteinas', metaProteinas);
+
+            actualizarInterfaz(true);
+
+            // Sincronizar en la nube si está conectado
+            if (isSupabaseConfigured) {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (s && s.session) {
+                    await supabaseClient.from('perfiles').upsert({
+                        id: s.session.user.id,
+                        peso: peso,
+                        meta_calorias: metaCalorias,
+                        meta_proteinas: metaProteinas,
+                        updated_at: new Date().toISOString()
+                    });
+                }
+            }
+        });
+
+        // Al añadir un alimento
+        alimentoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const alimentoSelect = document.getElementById('alimento');
+            if (alimentoSelect.value === "") return;
+
+            const index = parseInt(alimentoSelect.value);
+            const alimento = todosLosAlimentosGlobal[index];
+            const cantidad = parseFloat(document.getElementById('cantidad').value);
+
+            if (!alimento || isNaN(cantidad) || cantidad <= 0) return;
+
+            const factor = cantidad / 100;
+            const calCalculadas = alimento.calorias * factor;
+            const protCalculadas = alimento.proteinas * factor;
+
+            consumidoCalorias += calCalculadas;
+            consumidoProteinas += protCalculadas;
+
+            // Añadir a la lista de consumidos
+            alimentosConsumidos.push({
+                nombre: alimento.nombre,
+                cantidad: cantidad,
+                calorias: calCalculadas,
+                proteinas: protCalculadas
+            });
+
+            actualizarInterfaz();
+        });
+
+        // Función para renderizar los cambios en la pantalla
+        async function actualizarInterfaz(guardar = true) {
+            document.getElementById('txt-cal').innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
+            document.getElementById('txt-prot').innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
+
+            const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
+            const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
+
+            document.getElementById('fill-cal').style.width = `${pctCal}%`;
+            document.getElementById('fill-prot').style.width = `${pctProt}%`;
+
+            if (guardar) {
+                const logDia = {
+                    consumidoCalorias: consumidoCalorias,
+                    consumidoProteinas: consumidoProteinas,
+                    alimentosConsumidos: alimentosConsumidos
+                };
+                localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
+
+                // Sincronizar en la nube si está conectado
+                if (isSupabaseConfigured) {
+                    const { data: s } = await supabaseClient.auth.getSession();
+                    if (s && s.session) {
+                        await syncLogToCloud(s.session.user.id, fechaSeleccionada, logDia);
+                    }
+                }
+            }
+
+            renderizarAlimentosConsumidos();
+        }
+
+        function renderizarAlimentosConsumidos() {
+            const listaConsumidos = document.getElementById('lista-consumidos');
+            listaConsumidos.innerHTML = '';
+
+            if (alimentosConsumidos.length === 0) {
+                listaConsumidos.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.9rem;">
+                        No has añadido alimentos para esta fecha.
+                    </div>
+                `;
+                return;
+            }
+
+            alimentosConsumidos.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'food-item';
+                div.innerHTML = `
+                    <div class="food-details">
+                        <span class="food-name">${item.nombre}</span>
+                        <span class="food-macros">${item.cantidad}g -> ${Math.round(item.calorias)} kcal / ${item.proteinas.toFixed(1)}g prot</span>
+                    </div>
+                    <button class="delete-btn" onclick="eliminarAlimentoConsumido(${index})">Eliminar</button>
+                `;
+                listaConsumidos.appendChild(div);
+            });
+        }
+
+        window.eliminarAlimentoConsumido = function(index) {
+            const item = alimentosConsumidos[index];
+            if (!item) return;
+
+            consumidoCalorias = Math.max(0, consumidoCalorias - item.calorias);
+            consumidoProteinas = Math.max(0, consumidoProteinas - item.proteinas);
+            alimentosConsumidos.splice(index, 1);
+
+            actualizarInterfaz();
+        }
+
+        window.reiniciarDia = async function() {
+            if (confirm(`¿Estás seguro de que quieres reiniciar el progreso para el día ${fechaSeleccionada}?`)) {
+                consumidoCalorias = 0;
+                consumidoProteinas = 0;
+                alimentosConsumidos = [];
+                localStorage.removeItem(`nutricalc_log_${fechaSeleccionada}`);
+                
+                if (isSupabaseConfigured) {
+                    const { data: s } = await supabaseClient.auth.getSession();
+                    if (s && s.session) {
+                        await supabaseClient
+                            .from('registros_diarios')
+                            .delete()
+                            .eq('user_id', s.session.user.id)
+                            .eq('fecha', fechaSeleccionada);
+                    }
+                }
+                actualizarInterfaz(false);
+            }
+        }
+
+        // Cargar alimentos disponibles (por defecto + personalizados de localStorage) y filtrarlos si hay búsqueda
+        function cargarAlimentos(filtro = "") {
+            const alimentosSelect = document.getElementById('alimento');
+            alimentosSelect.innerHTML = '';
+
+            const alimentosPorDefecto = [
+                { nombre: "Pechuga de Pollo", calorias: 165, proteinas: 31 },
+                { nombre: "Arroz Cocido", calorias: 130, proteinas: 3 },
+                { nombre: "Huevo Entero", calorias: 155, proteinas: 13 },
+                { nombre: "Yogur Griego", calorias: 60, proteinas: 10 }
+            ];
+
+            const alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
+            todosLosAlimentosGlobal = [...alimentosPorDefecto, ...alimentosPersonalizados];
+
+            const query = filtro.toLowerCase().trim();
+            let matches = 0;
+
+            todosLosAlimentosGlobal.forEach((alimento, index) => {
+                if (alimento.nombre.toLowerCase().includes(query)) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${alimento.nombre} (100g) -> ${alimento.calorias}kcal / ${alimento.proteinas}g prot`;
+                    alimentosSelect.appendChild(option);
+                    matches++;
+                }
+            });
+
+            if (matches === 0) {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "No se encontraron alimentos";
+                alimentosSelect.appendChild(option);
+            }
+        }
+
+        // Cargar datos específicos del día seleccionado
+        async function cargarDatosDeFecha(fecha) {
+            let logDia = null;
+
+            if (isSupabaseConfigured) {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (s && s.session) {
+                    const userId = s.session.user.id;
+                    const { data: logCloud } = await supabaseClient
+                        .from('registros_diarios')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .eq('fecha', fecha)
+                        .single();
+
+                    if (logCloud) {
+                        logDia = {
+                            consumidoCalorias: Number(logCloud.consumido_calorias),
+                            consumidoProteinas: Number(logCloud.consumido_proteinas),
+                            alimentosConsumidos: logCloud.alimentos_consumidos || []
+                        };
+                        localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
+                    }
+                }
+            }
+
+            if (!logDia) {
+                logDia = JSON.parse(localStorage.getItem(`nutricalc_log_${fecha}`));
+
+                // Si no hay log específico para hoy pero hay datos legacy del día, migrar
+                if (!logDia && fecha === fechaHoy) {
+                    const legacyCal = localStorage.getItem('consumidoCalorias');
+                    const legacyProt = localStorage.getItem('consumidoProteinas');
+                    const legacyList = localStorage.getItem('alimentosConsumidos');
+
+                    if (legacyCal !== null || legacyProt !== null || legacyList !== null) {
+                        logDia = {
+                            consumidoCalorias: parseFloat(legacyCal) || 0,
+                            consumidoProteinas: parseFloat(legacyProt) || 0,
+                            alimentosConsumidos: JSON.parse(legacyList) || []
+                        };
+                        localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
+                        
+                        if (isSupabaseConfigured) {
+                            const { data: s } = await supabaseClient.auth.getSession();
+                            if (s && s.session) {
+                                await syncLogToCloud(s.session.user.id, fecha, logDia);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!logDia) {
+                logDia = {
+                    consumidoCalorias: 0,
+                    consumidoProteinas: 0,
+                    alimentosConsumidos: []
+                };
+            }
+
+            consumidoCalorias = logDia.consumidoCalorias;
+            consumidoProteinas = logDia.consumidoProteinas;
+            alimentosConsumidos = logDia.alimentosConsumidos;
+
+            actualizarInterfaz(false);
+        }
+
+        // Configurar buscador de alimentos
+        const buscadorAlimento = document.getElementById('buscador-alimento');
+        buscadorAlimento.addEventListener('input', (e) => {
+            cargarAlimentos(e.target.value);
+        });
+
+        // Configurar fecha inicial de hoy y eventos
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        fechaHoy = `${yyyy}-${mm}-${dd}`;
+        fechaInput.value = fechaHoy;
+        fechaSeleccionada = fechaHoy;
+
+        fechaInput.addEventListener('change', (e) => {
+            fechaSeleccionada = e.target.value;
+            cargarDatosDeFecha(fechaSeleccionada);
+        });
+
+        // Inicializar datos al cargar
+        cargarAlimentos();
+        
+        if (!isSupabaseConfigured) {
+            cargarDatosDeFecha(fechaSeleccionada);
+        }
+    </script>
+</body>
+
+</html>

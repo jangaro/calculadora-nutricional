@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriCalc - Añadir Nuevo Alimento</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Enlace a estilos externos -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Supabase SDK y Configuración -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>NutriCalc 📊</h1>
+            <p>Añadir nuevos alimentos personalizados</p>
+        </header>
+
+        <div class="header-actions">
+            <a href="index.html" class="nav-link">← Volver a la Calculadora</a>
+        </div>
+
+        <!-- Alerta de éxito temporal -->
+        <div id="toast" class="toast" style="display: none;">
+            <span>¡Alimento guardado correctamente!</span>
+        </div>
+
+        <main class="grid-layout">
+            <!-- Columna 1: Formulario de creación -->
+            <div class="column">
+                <section>
+                    <h2>1. Nuevo Alimento</h2>
+                    <form id="crear-alimento-form">
+                        <div class="form-group">
+                            <label for="nombre-alimento">Nombre del Alimento:</label>
+                            <input type="text" id="nombre-alimento" placeholder="Ej. Plátano, Avena, Salmón..."
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label for="calorias-alimento">Calorías por 100g (kcal):</label>
+                            <input type="number" id="calorias-alimento" min="0" placeholder="Ej. 89" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="proteinas-alimento">Proteínas por 100g (g):</label>
+                            <input type="number" id="proteinas-alimento" step="0.1" min="0" placeholder="Ej. 1.1"
+                                required>
+                        </div>
+                        <button type="submit" class="btn-blue">Guardar Alimento</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- Columna 2: Lista de alimentos personalizados -->
+            <div class="column">
+                <section style="height: 100%; display: flex; flex-direction: column;">
+                    <h2>
+                        <span>Tus Alimentos Creados</span>
+                    </h2>
+
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start;">
+                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 12px;">
+                            Estos alimentos se añadirán a tu calculadora. Puedes eliminarlos si ya no los necesitas.
+                        </p>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <input type="text" id="buscador-personalizados" placeholder="Buscar entre tus alimentos creados...">
+                        </div>
+
+                        <!-- Lista de alimentos -->
+                        <div id="lista-personalizados" class="food-list" style="max-height: 300px;">
+                            <!-- Cargado dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Determinar si Supabase está correctamente configurado
+        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && 
+                                     typeof SUPABASE_ANON_KEY !== 'undefined' && 
+                                     SUPABASE_URL !== "TU_SUPABASE_URL" && 
+                                     SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" && 
+                                     supabaseClient !== null;
+
+        let currentUser = null;
+
+        const crearForm = document.getElementById('crear-alimento-form');
+        const listaDiv = document.getElementById('lista-personalizados');
+        const toast = document.getElementById('toast');
+
+        // Comprobación de Sesión de Supabase
+        async function comprobarSesion() {
+            if (isSupabaseConfigured) {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (s && s.session) {
+                    currentUser = s.session.user;
+                } else {
+                    alert("Acceso denegado. Por favor, inicia sesión en la calculadora primero.");
+                    window.location.href = "index.html";
+                    return;
+                }
+            }
+            // Una vez comprobada la sesión (o si corre local), mostrar alimentos
+            mostrarAlimentos();
+        }
+
+        // Guardar nuevo alimento
+        crearForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre-alimento').value.trim();
+            const calorias = parseFloat(document.getElementById('calorias-alimento').value);
+            const proteinas = parseFloat(document.getElementById('proteinas-alimento').value);
+
+            if (!nombre || isNaN(calorias) || isNaN(proteinas)) return;
+
+            // Obtener lista actual de localStorage para caché
+            const alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
+            const nuevoAlimento = { nombre, calorias, proteinas };
+
+            if (isSupabaseConfigured && currentUser) {
+                try {
+                    // Guardar en la base de datos de Supabase
+                    const { data, error } = await supabaseClient
+                        .from('alimentos_personalizados')
+                        .insert({
+                            user_id: currentUser.id,
+                            nombre: nombre,
+                            calorias: calorias,
+                            proteinas: proteinas
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    if (data) {
+                        // Guardar en caché con el ID de Supabase para poder borrarlo
+                        nuevoAlimento.id = data.id;
+                    }
+                } catch (err) {
+                    console.error("Error al guardar el alimento en la nube:", err);
+                    alert("Error de conexión. No se pudo guardar en la nube.");
+                    return;
+                }
+            }
+
+            // Añadir al caché local
+            alimentosPersonalizados.push(nuevoAlimento);
+            localStorage.setItem('alimentosPersonalizados', JSON.stringify(alimentosPersonalizados));
+
+            // Resetear formulario y buscador
+            crearForm.reset();
+            buscadorPersonalizados.value = '';
+
+            // Mostrar notificación e interfaz
+            mostrarToast();
+            mostrarAlimentos();
+        });
+
+        // Mostrar notificación de éxito
+        function mostrarToast() {
+            toast.style.display = 'flex';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // Cargar y mostrar alimentos personalizados con soporte de búsqueda
+        async function mostrarAlimentos(filtro = "") {
+            listaDiv.innerHTML = '';
+            let alimentosPersonalizados = [];
+
+            if (isSupabaseConfigured && currentUser) {
+                try {
+                    const { data: alimentosCloud } = await supabaseClient
+                        .from('alimentos_personalizados')
+                        .select('*')
+                        .eq('user_id', currentUser.id)
+                        .order('created_at', { ascending: true });
+
+                    if (alimentosCloud) {
+                        alimentosPersonalizados = alimentosCloud.map(a => ({
+                            id: a.id,
+                            nombre: a.nombre,
+                            calorias: Number(a.calorias),
+                            proteinas: Number(a.proteinas)
+                        }));
+                        // Actualizar caché
+                        localStorage.setItem('alimentosPersonalizados', JSON.stringify(alimentosPersonalizados));
+                    }
+                } catch (err) {
+                    console.warn("No se pudo conectar a Supabase para listar. Usando caché local.");
+                    alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
+                }
+            } else {
+                alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
+            }
+
+            if (alimentosPersonalizados.length === 0) {
+                listaDiv.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.9rem;">
+                        No has creado alimentos personalizados aún.
+                    </div>
+                `;
+                return;
+            }
+
+            const query = filtro.toLowerCase().trim();
+            const filtrados = alimentosPersonalizados
+                .map((alimento, originalIndex) => ({ alimento, originalIndex }))
+                .filter(item => item.alimento.nombre.toLowerCase().includes(query));
+
+            if (filtrados.length === 0) {
+                listaDiv.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.9rem;">
+                        No se encontraron coincidencias.
+                    </div>
+                `;
+                return;
+            }
+
+            filtrados.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'food-item';
+                div.innerHTML = `
+                    <div class="food-details">
+                        <span class="food-name">${item.alimento.nombre}</span>
+                        <span class="food-macros">100g -> ${item.alimento.calorias} kcal / ${item.alimento.proteinas}g prot</span>
+                    </div>
+                    <button class="delete-btn" onclick="eliminarAlimento(${item.originalIndex})">Eliminar</button>
+                `;
+                listaDiv.appendChild(div);
+            });
+        }
+
+        // Eliminar alimento personalizado
+        window.eliminarAlimento = async function (index) {
+            const alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
+            const alimentoAEliminar = alimentosPersonalizados[index];
+            if (!alimentoAEliminar) return;
+
+            if (isSupabaseConfigured && currentUser && alimentoAEliminar.id) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('alimentos_personalizados')
+                        .delete()
+                        .eq('id', alimentoAEliminar.id);
+
+                    if (error) throw error;
+                } catch (err) {
+                    console.error("Error al eliminar el alimento de la nube:", err);
+                    alert("No se pudo eliminar en la nube. Revisa tu conexión.");
+                    return;
+                }
+            }
+
+            // Eliminar de caché local
+            alimentosPersonalizados.splice(index, 1);
+            localStorage.setItem('alimentosPersonalizados', JSON.stringify(alimentosPersonalizados));
+            
+            // Refrescar lista respetando el filtro actual
+            mostrarAlimentos(buscadorPersonalizados.value);
+        };
+
+        // Configurar buscador
+        const buscadorPersonalizados = document.getElementById('buscador-personalizados');
+        buscadorPersonalizados.addEventListener('input', (e) => {
+            mostrarAlimentos(e.target.value);
+        });
+
+        // Cargar al iniciar comprobando sesión primero
+        comprobarSesion();
+    </script>
+</body>
+
+</html>

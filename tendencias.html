@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriCalc - Tendencias Semanales</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Enlace a estilos externos -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Supabase SDK y Configuración -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Tendencias Semanales 📈</h1>
+            <p>Análisis de consumos de los últimos 7 días</p>
+        </header>
+
+        <div class="header-actions">
+            <a href="index.html" class="nav-link">← Volver a la Calculadora</a>
+        </div>
+
+        <main>
+            <!-- Sección 1: Tarjetas Estadísticas de Resumen -->
+            <section style="margin-bottom: 30px;">
+                <h2>Resumen de la Semana</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value calorias-color" id="avg-cal">0 kcal</div>
+                        <div class="stat-label">Promedio Calorías</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value proteinas-color" id="avg-prot">0 g</div>
+                        <div class="stat-label">Promedio Proteínas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="days-cal">0 / 7</div>
+                        <div class="stat-label">Meta Calorías Lograda</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="days-prot">0 / 7</div>
+                        <div class="stat-label">Meta Proteínas Lograda</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección 2: Gráficos de Tendencias -->
+            <div class="charts-grid">
+                <!-- Gráfico de Calorías -->
+                <div class="chart-card">
+                    <h3>Calorías Semanales (kcal)</h3>
+                    <div class="chart-wrapper">
+                        <svg id="chart-calorias" class="chart-svg" viewBox="0 0 500 260">
+                            <defs>
+                                <linearGradient id="calGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#3b82f6" />
+                                    <stop offset="100%" stop-color="#60a5fa" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Se genera dinámicamente con JS -->
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Proteínas -->
+                <div class="chart-card">
+                    <h3>Proteínas Semanales (g)</h3>
+                    <div class="chart-wrapper">
+                        <svg id="chart-proteinas" class="chart-svg" viewBox="0 0 500 260">
+                            <defs>
+                                <linearGradient id="protGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#10b981" />
+                                    <stop offset="100%" stop-color="#34d399" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Se genera dinámicamente con JS -->
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Determinar si Supabase está correctamente configurado
+        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && 
+                                     typeof SUPABASE_ANON_KEY !== 'undefined' && 
+                                     SUPABASE_URL !== "TU_SUPABASE_URL" && 
+                                     SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" && 
+                                     supabaseClient !== null;
+
+        let currentUser = null;
+
+        // Metas globales
+        const metaCalorias = parseFloat(localStorage.getItem('metaCalorias')) || 2000;
+        const metaProteinas = parseFloat(localStorage.getItem('metaProteinas')) || 140;
+
+        // Generar los últimos 7 días (incluyendo hoy)
+        const fechas = [];
+        const nombresDias = [];
+        const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            
+            fechas.push(`${yyyy}-${mm}-${dd}`);
+            nombresDias.push(`${diasSemana[d.getDay()]} ${dd}/${mm}`);
+        }
+
+        // Comprobación de Sesión de Supabase al cargar
+        async function comprobarSesion() {
+            if (isSupabaseConfigured) {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (s && s.session) {
+                    currentUser = s.session.user;
+                } else {
+                    alert("Acceso denegado. Por favor, inicia sesión en la calculadora primero.");
+                    window.location.href = "index.html";
+                    return;
+                }
+            }
+            
+            // Cargar y procesar datos semanales
+            await procesarTendenciasSemanales();
+        }
+
+        async function procesarTendenciasSemanales() {
+            const logsMap = {};
+
+            // Intentar cargar datos de Supabase si está activo
+            if (isSupabaseConfigured && currentUser) {
+                try {
+                    const { data: logsCloud, error } = await supabaseClient
+                        .from('registros_diarios')
+                        .select('*')
+                        .eq('user_id', currentUser.id)
+                        .in('fecha', fechas);
+
+                    if (error) throw error;
+
+                    if (logsCloud) {
+                        logsCloud.forEach(row => {
+                            logsMap[row.fecha] = {
+                                consumidoCalorias: Number(row.consumido_calorias),
+                                consumidoProteinas: Number(row.consumido_proteinas),
+                                alimentosConsumidos: row.alimentos_consumidos || []
+                            };
+                        });
+                    }
+                } catch (err) {
+                    console.warn("Error al cargar tendencias de la nube. Usando caché local:", err);
+                }
+            }
+
+            // Mapear logs unificando base de datos y local caché
+            const logs = fechas.map(fecha => {
+                return logsMap[fecha] || 
+                       JSON.parse(localStorage.getItem(`nutricalc_log_${fecha}`)) || 
+                       { consumidoCalorias: 0, consumidoProteinas: 0, alimentosConsumidos: [] };
+            });
+
+            // Calcular Métricas
+            const totalCal = logs.reduce((sum, log) => sum + log.consumidoCalorias, 0);
+            const totalProt = logs.reduce((sum, log) => sum + log.consumidoProteinas, 0);
+            const promCal = Math.round(totalCal / 7);
+            const promProt = Number((totalProt / 7).toFixed(1));
+
+            const cumplidoCal = logs.filter(log => log.consumidoCalorias >= metaCalorias).length;
+            const cumplidoProt = logs.filter(log => log.consumidoProteinas >= metaProteinas).length;
+
+            // Mostrar Estadísticas en las Tarjetas
+            document.getElementById('avg-cal').textContent = `${promCal} kcal`;
+            document.getElementById('avg-prot').textContent = `${promProt} g`;
+            document.getElementById('days-cal').textContent = `${cumplidoCal} / 7`;
+            document.getElementById('days-prot').textContent = `${cumplidoProt} / 7`;
+
+            // Configuración común de gráficos SVG
+            const svgWidth = 500;
+            const svgHeight = 260;
+            const startX = 50;
+            const startY = 30;
+            const plotWidth = svgWidth - startX - 20;  // 430px de ancho útil
+            const plotHeight = svgHeight - startY - 40; // 190px de alto útil
+            const endY = startY + plotHeight;          // Y=220px (base del gráfico)
+            const stepX = plotWidth / 7;                // Ancho de columna por día
+            const barWidth = 28;                        // Grosor de barra
+
+            // Función interna para dibujar un gráfico de barras SVG
+            function dibujarGrafico(svgId, keyLog, meta, maxDefault, isCalGradient) {
+                const svg = document.getElementById(svgId);
+                svg.querySelectorAll('line, text, rect').forEach(el => el.remove()); // Limpiar dibujos previos si los hubiera
+
+                const consumos = logs.map(log => log[keyLog]);
+                const maxVal = Math.max(...consumos, meta, maxDefault) * 1.1; // 10% margen superior
+
+                // 1. Dibujar líneas de cuadrícula y eje Y (4 divisiones)
+                for (let i = 0; i <= 4; i++) {
+                    const ratio = i / 4;
+                    const value = Math.round(maxVal * ratio);
+                    const y = endY - (ratio * plotHeight);
+
+                    // Línea horizontal
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("class", "grid-line");
+                    line.setAttribute("x1", startX);
+                    line.setAttribute("y1", y);
+                    line.setAttribute("x2", svgWidth - 20);
+                    line.setAttribute("y2", y);
+                    svg.appendChild(line);
+
+                    // Texto del eje Y
+                    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    label.setAttribute("class", "axis-text");
+                    label.setAttribute("x", startX - 8);
+                    label.setAttribute("y", y + 4);
+                    label.setAttribute("text-anchor", "end");
+                    label.textContent = value;
+                    svg.appendChild(label);
+                }
+
+                // 2. Línea de Meta (Goal)
+                const goalY = endY - (meta / maxVal) * plotHeight;
+                const goalLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                goalLine.setAttribute("class", "goal-line");
+                goalLine.setAttribute("x1", startX);
+                goalLine.setAttribute("y1", goalY);
+                goalLine.setAttribute("x2", svgWidth - 20);
+                goalLine.setAttribute("y2", goalY);
+                svg.appendChild(goalLine);
+
+                // Texto de Meta
+                const goalText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                goalText.setAttribute("class", "goal-text");
+                goalText.setAttribute("x", startX + 5);
+                goalText.setAttribute("y", goalY - 5);
+                goalText.textContent = `Meta: ${Math.round(meta)}`;
+                svg.appendChild(goalText);
+
+                // 3. Dibujar Barras, etiquetas y subetiquetas
+                logs.forEach((log, index) => {
+                    const valor = log[keyLog];
+                    const h = (valor / maxVal) * plotHeight;
+                    const x = startX + index * stepX + (stepX - barWidth) / 2;
+                    const y = endY - h;
+
+                    // Barra
+                    if (h > 0) {
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("class", isCalGradient ? "chart-bar-cal" : "chart-bar-prot");
+                        rect.setAttribute("x", x);
+                        rect.setAttribute("y", y);
+                        rect.setAttribute("width", barWidth);
+                        rect.setAttribute("height", h);
+                        rect.setAttribute("rx", 4);
+                        rect.setAttribute("ry", 4);
+                        
+                        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+                        title.textContent = `${nombresDias[index]}: ${Math.round(valor)}${keyLog === 'consumidoCalorias' ? ' kcal' : ' g'}`;
+                        rect.appendChild(title);
+                        svg.appendChild(rect);
+
+                        // Texto del valor
+                        const valueText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        valueText.setAttribute("class", "bar-text");
+                        valueText.setAttribute("x", x + barWidth / 2);
+                        valueText.setAttribute("y", y - 6);
+                        valueText.textContent = Math.round(valor);
+                        svg.appendChild(valueText);
+                    }
+
+                    // Texto del eje X
+                    const dayText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    dayText.setAttribute("class", "axis-text");
+                    dayText.setAttribute("x", x + barWidth / 2);
+                    dayText.setAttribute("y", endY + 20);
+                    dayText.setAttribute("text-anchor", "middle");
+                    dayText.textContent = nombresDias[index].split(" ")[0];
+                    svg.appendChild(dayText);
+
+                    // Subtexto del eje X
+                    const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    dateText.setAttribute("class", "axis-text");
+                    dateText.setAttribute("style", "font-size: 9px; opacity: 0.7;");
+                    dateText.setAttribute("x", x + barWidth / 2);
+                    dateText.setAttribute("y", endY + 32);
+                    dateText.setAttribute("text-anchor", "middle");
+                    dateText.textContent = nombresDias[index].split(" ")[1];
+                    svg.appendChild(dateText);
+                });
+
+                // Ejes
+                const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                xAxis.setAttribute("class", "axis-line");
+                xAxis.setAttribute("x1", startX - 2);
+                xAxis.setAttribute("y1", endY);
+                xAxis.setAttribute("x2", svgWidth - 20);
+                xAxis.setAttribute("y2", endY);
+                svg.appendChild(xAxis);
+
+                const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                yAxis.setAttribute("class", "axis-line");
+                yAxis.setAttribute("x1", startX);
+                yAxis.setAttribute("y1", startY);
+                yAxis.setAttribute("x2", startX);
+                yAxis.setAttribute("y2", endY + 2);
+                svg.appendChild(yAxis);
+            }
+
+            // Dibujar ambos gráficos
+            dibujarGrafico("chart-calorias", "consumidoCalorias", metaCalorias, 1000, true);
+            dibujarGrafico("chart-proteinas", "consumidoProteinas", metaProteinas, 80, false);
+        }
+
+        // Iniciar comprobando sesión
+        comprobarSesion();
+    </script>
+</body>
+
+</html>
