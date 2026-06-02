@@ -653,12 +653,28 @@
             cargarDatosDeFecha(fechaSeleccionada);
         });
 
-        // Inicializar datos al cargar
-        cargarAlimentos();
-
-        if (!isSupabaseConfigured) {
-            cargarDatosDeFecha(fechaSeleccionada);
+// --- INICIALIZACIÓN DE LA APP CORREGIDA ---
+        async function inicializarApp() {
+            // 1. Cargamos la lista de alimentos disponibles en el selector
+            cargarAlimentos();
+            
+            // 2. Si Supabase está conectado, esperamos un momento a que verifique la sesión del usuario
+            if (isSupabaseConfigured) {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (s && s.session) {
+                    // Si hay sesión activa, cargamos los datos del usuario de hoy
+                    await cargarDatosDeFecha(fechaSeleccionada);
+                    return;
+                }
+            }
+            
+            // 3. Si no hay Supabase o no hay usuario logueado todavía, cargamos el modo local
+            await cargarDatosDeFecha(fechaSeleccionada);
         }
+
+        // Ejecutamos la inicialización automática al abrir la web
+        inicializarApp();
+    </script>
     </script>
 </body>
 
