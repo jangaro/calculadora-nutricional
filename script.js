@@ -1,5 +1,5 @@
 // --- JAVASCRIPT: Lógica de la Aplicación ---
-
+/*
 
 
 
@@ -66,4 +66,4 @@ function actualizarInterfaz() {
 }
 
 // Inicializar la aplicación mostrando los valores iniciales al cargar la página
-actualizarInterfaz();
+actualizarInterfaz();*/
