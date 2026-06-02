@@ -653,26 +653,48 @@
             cargarDatosDeFecha(fechaSeleccionada);
         });
 
-// --- INICIALIZACIÓN DE LA APP CORREGIDA ---
+// --- INICIALIZACIÓN DE LA APP (VERSIÓN CORREGIDA Y ORDENADA) ---
+        
+        // 1. Configurar primero la fecha de hoy para que toda la app sepa qué día es
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        fechaHoy = `${yyyy}-${mm}-${dd}`;
+        fechaInput.value = fechaHoy;
+        fechaSeleccionada = fechaHoy;
+
+        // 2. Escuchar los cambios de fecha en el calendario
+        fechaInput.addEventListener('change', (e) => {
+            fechaSeleccionada = e.target.value;
+            cargarDatosDeFecha(fechaSeleccionada);
+        });
+
+        // 3. Configurar el buscador de alimentos para que filtre al escribir
+        buscadorAlimento.addEventListener('input', (e) => {
+            cargarAlimentos(e.target.value);
+        });
+
+        // 4. Función principal que arranca el motor de la app
         async function inicializarApp() {
-            // 1. Cargamos la lista de alimentos disponibles en el selector
+            // Cargamos la lista de alimentos en el menú desplegable
             cargarAlimentos();
             
-            // 2. Si Supabase está conectado, esperamos un momento a que verifique la sesión del usuario
+            // Si Supabase está listo, comprobamos si ya hay un usuario con sesión abierta
             if (isSupabaseConfigured) {
                 const { data: s } = await supabaseClient.auth.getSession();
                 if (s && s.session) {
-                    // Si hay sesión activa, cargamos los datos del usuario de hoy
+                    // Si está logueado, traemos sus alimentos guardados de la nube
                     await cargarDatosDeFecha(fechaSeleccionada);
                     return;
                 }
             }
             
-            // 3. Si no hay Supabase o no hay usuario logueado todavía, cargamos el modo local
+            // Si no está logueado o no hay internet, cargamos el almacenamiento local
             await cargarDatosDeFecha(fechaSeleccionada);
         }
 
-        // Ejecutamos la inicialización automática al abrir la web
+        // ¡Arrancamos!
         inicializarApp();
     </script>
     </script>
