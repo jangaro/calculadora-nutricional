@@ -14,6 +14,7 @@
     <!-- Supabase SDK y Configuración -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
 </head>
 
 <body>
@@ -32,10 +33,12 @@
             <div class="auth-card">
                 <h2 id="auth-title">Iniciar Sesión</h2>
                 <p id="auth-subtitle">Accede para guardar y sincronizar tus datos en la nube</p>
-                
+
                 <div class="auth-tabs">
-                    <button type="button" id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Ingresar</button>
-                    <button type="button" id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Registrarse</button>
+                    <button type="button" id="tab-login" class="auth-tab active"
+                        onclick="switchAuthTab('login')">Ingresar</button>
+                    <button type="button" id="tab-signup" class="auth-tab"
+                        onclick="switchAuthTab('signup')">Registrarse</button>
                 </div>
 
                 <div id="auth-error-msg" class="auth-error" style="display: none;"></div>
@@ -57,8 +60,10 @@
         <!-- Contenido principal de la calculadora -->
         <div id="app-section" style="display: none;">
             <!-- Banner de aviso de modo local -->
-            <div id="local-mode-banner" class="auth-error" style="display: none; background-color: #fef08a; color: #854d0e; border-color: #fef08a; margin-bottom: 20px;">
-                ⚠️ <strong>Modo Local Offline:</strong> Para sincronizar tus datos en la nube, configura tus credenciales de Supabase en <code>supabase-config.js</code>.
+            <div id="local-mode-banner" class="auth-error"
+                style="display: none; background-color: #fef08a; color: #854d0e; border-color: #fef08a; margin-bottom: 20px;">
+                ⚠️ <strong>Modo Local Offline:</strong> Para sincronizar tus datos en la nube, configura tus
+                credenciales de Supabase en <code>supabase-config.js</code>.
             </div>
 
             <header>
@@ -139,7 +144,8 @@
                             </div>
                         </div>
 
-                        <button onclick="reiniciarDia()" class="btn-red" style="margin-top: 15px;">Reiniciar Día</button>
+                        <button onclick="reiniciarDia()" class="btn-red" style="margin-top: 15px;">Reiniciar
+                            Día</button>
                     </section>
 
                     <section style="flex-grow: 1;">
@@ -155,11 +161,11 @@
 
     <script>
         // Determinar si Supabase está correctamente configurado
-        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && 
-                                     typeof SUPABASE_ANON_KEY !== 'undefined' && 
-                                     SUPABASE_URL !== "TU_SUPABASE_URL" && 
-                                     SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" && 
-                                     supabaseClient !== null;
+        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' &&
+            typeof SUPABASE_ANON_KEY !== 'undefined' &&
+            SUPABASE_URL !== "TU_SUPABASE_URL" &&
+            SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" &&
+            supabaseClient !== null;
 
         // Variables de estado (valores de caché en memoria)
         let peso = parseFloat(localStorage.getItem('peso')) || 70;
@@ -187,14 +193,14 @@
 
         // --- Gestión de Autenticación con Supabase ---
 
-        window.switchAuthTab = function(mode) {
+        window.switchAuthTab = function (mode) {
             authMode = mode;
             const title = document.getElementById('auth-title');
             const subtitle = document.getElementById('auth-subtitle');
             const submitBtn = document.getElementById('auth-submit-btn');
             const tabLogin = document.getElementById('tab-login');
             const tabSignup = document.getElementById('tab-signup');
-            
+
             if (mode === "login") {
                 title.textContent = "Iniciar Sesión";
                 subtitle.textContent = "Accede para guardar y sincronizar tus datos en la nube";
@@ -218,14 +224,14 @@
                     document.getElementById('app-section').style.display = 'block';
                     document.getElementById('user-badge').style.display = 'flex';
                     document.getElementById('user-email-text').textContent = session.user.email;
-                    
+
                     // Cargar y sincronizar datos de Supabase
                     await inicializarDatosDesdeSupabase(session.user.id);
                 } else {
                     document.getElementById('auth-section').style.display = 'flex';
                     document.getElementById('app-section').style.display = 'none';
                     document.getElementById('user-badge').style.display = 'none';
-                    
+
                     limpiarCachéLocal();
                 }
             });
@@ -234,7 +240,7 @@
             console.log("Supabase credentials not configured. Running in local-only offline mode.");
             document.getElementById('app-section').style.display = 'block';
             document.getElementById('local-mode-banner').style.display = 'block';
-            
+
             // Cargar datos locales al iniciar
             peso = parseFloat(localStorage.getItem('peso')) || 70;
             metaCalorias = parseFloat(localStorage.getItem('metaCalorias')) || 2000;
@@ -249,7 +255,7 @@
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const errorDiv = document.getElementById('auth-error-msg');
-            
+
             errorDiv.style.display = 'none';
             errorDiv.textContent = "";
 
@@ -270,7 +276,7 @@
             }
         });
 
-        window.cerrarSesion = async function() {
+        window.cerrarSesion = async function () {
             if (isSupabaseConfigured) {
                 await supabaseClient.auth.signOut();
             }
@@ -280,24 +286,24 @@
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key.startsWith('nutricalc_log_') || 
-                    key === 'alimentosConsumidos' || 
-                    key === 'alimentosPersonalizados' || 
-                    key === 'peso' || 
-                    key === 'metaCalorias' || 
+                if (key.startsWith('nutricalc_log_') ||
+                    key === 'alimentosConsumidos' ||
+                    key === 'alimentosPersonalizados' ||
+                    key === 'peso' ||
+                    key === 'metaCalorias' ||
                     key === 'metaProteinas') {
                     keysToRemove.push(key);
                 }
             }
             keysToRemove.forEach(k => localStorage.removeItem(k));
-            
+
             peso = 70;
             metaCalorias = 2000;
             metaProteinas = 140;
             consumidoCalorias = 0;
             consumidoProteinas = 0;
             alimentosConsumidos = [];
-            
+
             document.getElementById('peso').value = peso;
             document.getElementById('objetivo-cal').value = metaCalorias;
             cargarAlimentos();
@@ -318,11 +324,11 @@
                 peso = Number(perfil.peso);
                 metaCalorias = Number(perfil.meta_calorias);
                 metaProteinas = Number(perfil.meta_proteinas);
-                
+
                 localStorage.setItem('peso', peso);
                 localStorage.setItem('metaCalorias', metaCalorias);
                 localStorage.setItem('metaProteinas', metaProteinas);
-                
+
                 document.getElementById('peso').value = peso;
                 document.getElementById('objetivo-cal').value = metaCalorias;
             } else if (errPerfil && errPerfil.code === "PGRST116") {
@@ -340,7 +346,7 @@
                 .from('alimentos_personalizados')
                 .select('*')
                 .eq('user_id', userId);
-                
+
             if (alimentosCloud) {
                 const personalizados = alimentosCloud.map(a => ({
                     nombre: a.nombre,
@@ -487,7 +493,7 @@
             });
         }
 
-        window.eliminarAlimentoConsumido = function(index) {
+        window.eliminarAlimentoConsumido = function (index) {
             const item = alimentosConsumidos[index];
             if (!item) return;
 
@@ -498,13 +504,13 @@
             actualizarInterfaz();
         }
 
-        window.reiniciarDia = async function() {
+        window.reiniciarDia = async function () {
             if (confirm(`¿Estás seguro de que quieres reiniciar el progreso para el día ${fechaSeleccionada}?`)) {
                 consumidoCalorias = 0;
                 consumidoProteinas = 0;
                 alimentosConsumidos = [];
                 localStorage.removeItem(`nutricalc_log_${fechaSeleccionada}`);
-                
+
                 if (isSupabaseConfigured) {
                     const { data: s } = await supabaseClient.auth.getSession();
                     if (s && s.session) {
@@ -597,7 +603,7 @@
                             alimentosConsumidos: JSON.parse(legacyList) || []
                         };
                         localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
-                        
+
                         if (isSupabaseConfigured) {
                             const { data: s } = await supabaseClient.auth.getSession();
                             if (s && s.session) {
@@ -645,7 +651,7 @@
 
         // Inicializar datos al cargar
         cargarAlimentos();
-        
+
         if (!isSupabaseConfigured) {
             cargarDatosDeFecha(fechaSeleccionada);
         }

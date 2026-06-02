@@ -1,12 +1,7 @@
 // --- JAVASCRIPT: Lógica de la Aplicación ---
 
 
-// --- CONFIGURACIÓN DE SUPABASE ---
-const SUPABASE_URL = "https://nwobmedgvxpmkblfykpz.supabase.co/rest/v1/"; // <-- Cambia por tu URL real
-const SUPABASE_ANON_KEY = "sb_publishable_qOrkIzpm9-bL3u3JKK-h6g_sE-ticrZ";     // <-- Cambia por tu Anon Key real
 
-// Inicializamos el cliente global de Supabase
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
 // Variables globales de estado
