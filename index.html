@@ -656,10 +656,10 @@
 // --- INICIALIZACIÓN DE LA APP (VERSIÓN CORREGIDA Y ORDENADA) ---
         
         // 1. Configurar primero la fecha de hoy para que toda la app sepa qué día es
-        const hoy = new Date();
-        const yyyy = hoy.getFullYear();
-        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dd = String(hoy.getDate()).padStart(2, '0');
+        hoy = new Date();
+         yyyy = hoy.getFullYear();
+        mm = String(hoy.getMonth() + 1).padStart(2, '0');
+         dd = String(hoy.getDate()).padStart(2, '0');
         fechaHoy = `${yyyy}-${mm}-${dd}`;
         fechaInput.value = fechaHoy;
         fechaSeleccionada = fechaHoy;
