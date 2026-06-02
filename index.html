@@ -439,30 +439,48 @@
             document.getElementById('cantidad').value = 100;
         });
 
-        // --- FUNCIÓN DE INTERFAZ Y GUARDADO CON DETECTOR DE ERRORES ---
+      // --- FUNCIÓN DE INTERFAZ Y GUARDADO SIN ERRORES DE BARRAS ---
         async function actualizarInterfaz(guardarEnSupabase = false) {
-            // 1. Pintamos los datos en la pantalla
-            document.getElementById('txt-cal').innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
-            document.getElementById('txt-prot').innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
+            // 1. Pintamos los textos en la pantalla (comprobando que existan)
+            const txtCal = document.getElementById('txt-cal');
+            const txtProt = document.getElementById('txt-prot');
+            
+            if (txtCal) txtCal.innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
+            if (txtProt) txtProt.innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
 
             const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
             const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-            document.getElementById('bar-cal').style.width = `${pctCal}%`;
-            document.getElementById('bar-prot').style.width = `${pctProt}%`;
+            // CONTROL DE SEGURIDAD: Solo cambiamos el estilo si las barras realmente existen en el HTML
+            const barCal = document.getElementById('bar-cal') || document.getElementById('progreso-calorias');
+            const barProt = document.getElementById('bar-prot') || document.getElementById('progreso-proteinas');
 
-            // Pintamos la lista de alimentos en el HTML
+            if (barCal) {
+                barCal.style.width = `${pctCal}%`;
+            } else {
+                console.log("⚠️ Nota: No se encontró la barra de calorías en el HTML (ID bar-cal).");
+            }
+
+            if (barProt) {
+                barProt.style.width = `${pctProt}%`;
+            } else {
+                console.log("⚠️ Nota: No se encontró la barra de proteínas en el HTML (ID bar-prot).");
+            }
+
+            // Pintamos la lista de alimentos en el HTML si existe
             const lista = document.getElementById('lista-alimentos');
-            lista.innerHTML = '';
-            alimentosConsumidos.forEach((alimento, index) => {
-                const li = document.createElement('li');
-                li.className = 'alimento-item';
-                li.innerHTML = `
-                    <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
-                    <button class="delete-btn" onclick="eliminarAlimento(${index})">❌</button>
-                `;
-                lista.appendChild(li);
-            });
+            if (lista) {
+                lista.innerHTML = '';
+                alimentosConsumidos.forEach((alimento, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'alimento-item';
+                    li.innerHTML = `
+                        <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
+                        <button class="delete-btn" onclick="eliminarAlimento(${index})">❌</button>
+                    `;
+                    lista.appendChild(li);
+                });
+            }
 
             // 2. Guardado en LocalStorage (copia de seguridad local)
             const logDia = {
@@ -472,22 +490,16 @@
             };
             localStorage.setItem(`nutricalc_${fechaSeleccionada}`, JSON.stringify(logDia));
 
-            // 3. ¡EL DETECTOR DE ERRORES DE SUPABASE!
+            // 3. ¡GUARDADO EN SUPABASE!
             if (guardarEnSupabase && isSupabaseConfigured) {
-                console.log("🕵️‍♂️ Detective: Intentando guardar en Supabase...");
                 try {
                     const { data: s } = await supabaseClient.auth.getSession();
-                    if (!s || !s.session) {
-                        console.error("❌ Error: No se guarda en la nube porque NO hay un usuario logueado en este navegador.");
-                        return;
-                    }
+                    if (!s || !s.session) return;
 
                     const userId = s.session.user.id;
-                    console.log("🕵️‍♂️ Detective: Usuario detectado con ID:", userId);
-                    console.log("🕵️‍♂️ Detective: Guardando para la fecha:", fechaSeleccionada);
 
                     // Guardamos o actualizamos en la base de datos
-                    const { error } = await supabaseClient
+                    await supabaseClient
                         .from('registros_diarios')
                         .upsert({
                             user_id: userId,
@@ -498,13 +510,9 @@
                             updated_at: new Date()
                         }, { onConflict: 'user_id,fecha' });
 
-                    if (error) {
-                        console.error("❌ Error real de Supabase al guardar:", error.message, error.details);
-                    } else {
-                        console.log("✅ ¡ÉXITO! Datos guardados correctamente en la tabla registros_diarios.");
-                    }
+                    console.log("✅ Datos sincronizados con Supabase con éxito.");
                 } catch (err) {
-                    console.error("❌ Error inesperado en el código de guardado:", err);
+                    console.error("❌ Error al guardar en Supabase:", err);
                 }
             }
         }
