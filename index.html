@@ -439,9 +439,9 @@
             document.getElementById('cantidad').value = 100;
         });
 
-        // --- FUNCIÓN DE INTERFAZ Y SINCRO EN LA NUBE CORREGIDA ---
+        // --- FUNCIÓN ÚNICA DE INTERFAZ Y GUARDADO EN LA NUBE ---
         async function actualizarInterfaz(guardarEnSupabase = false) {
-            // 1. Pintamos los textos en la pantalla (comprobando que existan)
+            // 1. Pintamos los textos en la pantalla
             const txtCal = document.getElementById('txt-cal');
             const txtProt = document.getElementById('txt-prot');
 
@@ -451,7 +451,7 @@
             const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
             const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-            // CONTROL DE SEGURIDAD: Ajuste de barras
+            // CONTROL DE SEGURIDAD: Ajuste visual de barras reales
             const barCal = document.getElementById('fill-cal');
             const barProt = document.getElementById('fill-prot');
 
@@ -466,28 +466,28 @@
             };
             localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
 
-            // 3. ¡GUARDADO EN SUPABASE! (Ejecución garantizada)
+            // 3. ¡GUARDADO EN SUPABASE!
             if (guardarEnSupabase && isSupabaseConfigured) {
-                console.log("🕵️‍♂️ Detective: Comprobando sesión para guardar...");
+                console.log("🕵️‍♂️ Detective: Comprobando sesión del usuario...");
                 try {
                     const { data: s } = await supabaseClient.auth.getSession();
                     if (s && s.session) {
                         const userId = s.session.user.id;
                         console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
 
-                        // Usamos la función nativa de tu archivo
+                        // Usamos tu función nativa para subir el plato a la tabla registros_diarios
                         await syncLogToCloud(userId, fechaSeleccionada, logDia);
 
                         console.log("✅ Sincronización con la nube completada con éxito.");
                     } else {
-                        console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa.");
+                        console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa (Offline).");
                     }
                 } catch (err) {
                     console.error("❌ Error crítico al guardar en Supabase:", err);
                 }
             }
 
-            // 4. Pintamos la lista de alimentos usando la función dedicada
+            // 4. Renderizar visualmente la lista abajo
             renderizarAlimentosConsumidos();
         }
 
@@ -521,7 +521,7 @@
             });
         }
 
-        // --- FUNCIÓN GLOBAL PARA ELIMINAR UN ALIMENTO ---
+        // --- ACCIONES GLOBALES (ELIMINAR Y REINICIAR) ---
         window.eliminarAlimentoConsumido = async function (index) {
             const item = alimentosConsumidos[index];
             if (!item) return;
@@ -530,7 +530,7 @@
             consumidoProteinas = Math.max(0, consumidoProteinas - item.proteinas);
             alimentosConsumidos.splice(index, 1);
 
-            // Al eliminar también actualizamos la interfaz y guardamos el cambio en la nube
+            // Al eliminar también actualizamos la nube pasándole true
             await actualizarInterfaz(true);
         }
 
@@ -551,13 +551,14 @@
                             .eq('fecha', fechaSeleccionada);
                     }
                 }
-                actualizarInterfaz(false);
+                await actualizarInterfaz(false);
             }
         }
 
-        // Cargar alimentos disponibles (por defecto + personalizados de localStorage) y filtrarlos si hay búsqueda
+        // --- CARGA DE ALIMENTOS DISPONIBLES ---
         function cargarAlimentos(filtro = "") {
             const alimentosSelect = document.getElementById('alimento');
+            if (!alimentosSelect) return;
             alimentosSelect.innerHTML = '';
 
             const alimentosPorDefecto = [
@@ -591,7 +592,7 @@
             }
         }
 
-        // Cargar datos específicos del día seleccionado
+        // --- CARGA DE DATOS POR FECHA ---
         async function cargarDatosDeFecha(fecha) {
             let logDia = null;
 
@@ -604,7 +605,7 @@
                         .select('*')
                         .eq('user_id', userId)
                         .eq('fecha', fecha)
-                        .single();
+                        .maybeSingle();
 
                     if (logCloud) {
                         logDia = {
@@ -619,29 +620,6 @@
 
             if (!logDia) {
                 logDia = JSON.parse(localStorage.getItem(`nutricalc_log_${fecha}`));
-
-                // Si no hay log específico para hoy pero hay datos legacy del día, migrar
-                if (!logDia && fecha === fechaHoy) {
-                    const legacyCal = localStorage.getItem('consumidoCalorias');
-                    const legacyProt = localStorage.getItem('consumidoProteinas');
-                    const legacyList = localStorage.getItem('alimentosConsumidos');
-
-                    if (legacyCal !== null || legacyProt !== null || legacyList !== null) {
-                        logDia = {
-                            consumidoCalorias: parseFloat(legacyCal) || 0,
-                            consumidoProteinas: parseFloat(legacyProt) || 0,
-                            alimentosConsumidos: JSON.parse(legacyList) || []
-                        };
-                        localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
-
-                        if (isSupabaseConfigured) {
-                            const { data: s } = await supabaseClient.auth.getSession();
-                            if (s && s.session) {
-                                await syncLogToCloud(s.session.user.id, fecha, logDia);
-                            }
-                        }
-                    }
-                }
             }
 
             if (!logDia) {
@@ -656,73 +634,50 @@
             consumidoProteinas = logDia.consumidoProteinas;
             alimentosConsumidos = logDia.alimentosConsumidos;
 
-            actualizarInterfaz(false);
+            await actualizarInterfaz(false);
         }
 
-        // Configurar buscador de alimentos
+        // --- INICIALIZACIÓN DE DISPARADORES Y EVENTOS ---
         const buscadorAlimento = document.getElementById('buscador-alimento');
-        buscadorAlimento.addEventListener('input', (e) => {
-            cargarAlimentos(e.target.value);
-        });
+        if (buscadorAlimento) {
+            buscadorAlimento.addEventListener('input', (e) => {
+                cargarAlimentos(e.target.value);
+            });
+        }
 
-        // Configurar fecha inicial de hoy y eventos
-        let hoy = new Date();
-        let yyyy = hoy.getFullYear();
-        let mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        let dd = String(hoy.getDate()).padStart(2, '0');
+        if (fechaInput) {
+            fechaInput.addEventListener('change', async (e) => {
+                fechaSeleccionada = e.target.value;
+                await cargarDatosDeFecha(fechaSeleccionada);
+            });
+        }
+
+        // Configurar fecha inicial de hoy por defecto
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
         fechaHoy = `${yyyy}-${mm}-${dd}`;
-        fechaInput.value = fechaHoy;
+
+        if (fechaInput) fechaInput.value = fechaHoy;
         fechaSeleccionada = fechaHoy;
 
-        fechaInput.addEventListener('change', (e) => {
-            fechaSeleccionada = e.target.value;
-            cargarDatosDeFecha(fechaSeleccionada);
-        });
-
-        // --- INICIALIZACIÓN DE LA APP (VERSIÓN CORREGIDA Y ORDENADA) ---
-
-        // 1. Configurar primero la fecha de hoy para que toda la app sepa qué día es
-        hoy = new Date();
-        yyyy = hoy.getFullYear();
-        mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        dd = String(hoy.getDate()).padStart(2, '0');
-        fechaHoy = `${yyyy}-${mm}-${dd}`;
-        fechaInput.value = fechaHoy;
-        fechaSeleccionada = fechaHoy;
-
-        // 2. Escuchar los cambios de fecha en el calendario
-        fechaInput.addEventListener('change', (e) => {
-            fechaSeleccionada = e.target.value;
-            cargarDatosDeFecha(fechaSeleccionada);
-        });
-
-        // 3. Configurar el buscador de alimentos para que filtre al escribir
-        buscadorAlimento.addEventListener('input', (e) => {
-            cargarAlimentos(e.target.value);
-        });
-
-        // 4. Función principal que arranca el motor de la app
+        // Función de arranque de la aplicación
         async function inicializarApp() {
-            // Cargamos la lista de alimentos en el menú desplegable
             cargarAlimentos();
 
-            // Si Supabase está listo, comprobamos si ya hay un usuario con sesión abierta
             if (isSupabaseConfigured) {
                 const { data: s } = await supabaseClient.auth.getSession();
                 if (s && s.session) {
-                    // Si está logueado, traemos sus alimentos guardados de la nube
                     await cargarDatosDeFecha(fechaSeleccionada);
                     return;
                 }
             }
-
-            // Si no está logueado o no hay internet, cargamos el almacenamiento local
             await cargarDatosDeFecha(fechaSeleccionada);
         }
 
-        // ¡Arrancamos!
+        // ¡Arrancamos la aplicación limpia!
         inicializarApp();
-    </script>
     </script>
 </body>
 
