@@ -404,7 +404,7 @@
             }
         });
 
-        // Al añadir un alimento (CÓDIGO CORREGIDO Y ASÍNCRONO)
+        // Al añadir un alimento (CÓDIGO CORREGIDO Y CORRECCIÓN DE ASYNC)
         alimentoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -439,41 +439,71 @@
             document.getElementById('cantidad').value = 100;
         });
 
+        // --- FUNCIÓN DE INTERFAZ Y GUARDADO SIN ERRORES DE BARRAS ---
+        async function actualizarInterfaz(guardarEnSupabase = false) {
+            // 1. Pintamos los textos en la pantalla (comprobando que existan)
+            const txtCal = document.getElementById('txt-cal');
+            const txtProt = document.getElementById('txt-prot');
 
-        // 3. ¡GUARDADO EN SUPABASE! (VERSIÓN CON DETECTOR DE CONGELACIÓN)
-        if (guardarEnSupabase && isSupabaseConfigured) {
-            console.log("🕵️‍♂️ Detective: Comprobando sesión del usuario...");
-            try {
-                // Creamos una promesa que da error si Supabase tarda más de 3 segundos
-                const timeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Supabase no responde (Timeout de 3 segundos)")), 3000)
-                );
+            if (txtCal) txtCal.innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
+            if (txtProt) txtProt.innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
 
-                // Forzamos a competir la sesión de Supabase contra el reloj
-                const sessionPromise = supabaseClient.auth.getSession();
-                const { data: s } = await Promise.race([sessionPromise, timeout]);
+            const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
+            const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-                if (s && s.session) {
-                    const userId = s.session.user.id;
-                    console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
+            // CONTROL DE SEGURIDAD: Solo cambiamos el estilo si las barras realmente existen en el HTML
+            const barCal = document.getElementById('fill-cal');
+            const barProt = document.getElementById('fill-prot');
 
-                    // Intentamos la sincronización directa
-                    const syncPromise = syncLogToCloud(userId, fechaSeleccionada, logDia);
-                    await Promise.race([syncPromise, new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("La subida de datos a la tabla tardó demasiado")), 4000)
-                    )]);
+            if (barCal) barCal.style.width = `${pctCal}%`;
+            if (barProt) barProt.style.width = `${pctProt}%`;
 
-                    console.log("✅ Sincronización con la nube completada con éxito.");
-                } else {
-                    console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa (Offline).");
-                }
-            } catch (err) {
-                console.error("❌ ¡CHIVATAZO DE ERROR! El proceso falló por esto:", err.message || err);
+            // Pintamos la lista de alimentos en el HTML si existe
+            const lista = document.getElementById('lista-consumidos');
+            if (lista) {
+                lista.innerHTML = '';
+                alimentosConsumidos.forEach((alimento, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'alimento-item';
+                    li.innerHTML = `
+                        <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
+                        <button class="delete-btn" onclick="eliminarAlimentoConsumido(${index})">❌</button>
+                    `;
+                    lista.appendChild(li);
+                });
             }
-        }
 
-        // 4. Renderizar visualmente la lista abajo
-        renderizarAlimentosConsumidos();
+            // 2. Guardado en LocalStorage (copia de seguridad local)
+            const logDia = {
+                consumidoCalorias: consumidoCalorias,
+                consumidoProteinas: consumidoProteinas,
+                alimentosConsumidos: alimentosConsumidos
+            };
+            localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
+
+            // 3. ¡GUARDADO EN SUPABASE!
+            if (guardarEnSupabase && isSupabaseConfigured) {
+                console.log("🕵️‍♂️ Detective: Comprobando sesión del usuario...");
+                try {
+                    const { data: s } = await supabaseClient.auth.getSession();
+                    if (s && s.session) {
+                        const userId = s.session.user.id;
+                        console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
+
+                        // Usamos la función nativa de tu archivo
+                        await syncLogToCloud(userId, fechaSeleccionada, logDia);
+
+                        console.log("✅ Sincronización con la nube completada con éxito.");
+                    } else {
+                        console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa.");
+                    }
+                } catch (err) {
+                    console.error("❌ Error crítico al guardar en Supabase:", err);
+                }
+            }
+
+            // 4. Renderizar visualmente la lista abajo
+            renderizarAlimentosConsumidos();
         }
 
         // --- FUNCIÓN ÚNICA PARA RENDERIZAR LA LISTA VISUAL ---
