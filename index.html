@@ -490,29 +490,23 @@
             };
             localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
 
-            // 3. ¡GUARDADO EN SUPABASE!
+            // 3. ¡GUARDADO EN SUPABASE! (VERSIÓN CORREGIDA Y ROBUSTA)
             if (guardarEnSupabase && isSupabaseConfigured) {
                 try {
                     const { data: s } = await supabaseClient.auth.getSession();
-                    if (!s || !s.session) return;
+                    if (s && s.session) {
+                        const userId = s.session.user.id;
+                        console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
 
-                    const userId = s.session.user.id;
+                        // Usamos la función original de tu script que está probada y funciona
+                        await syncLogToCloud(userId, fechaSeleccionada, logDia);
 
-                    // Guardamos o actualizamos en la base de datos
-                    await supabaseClient
-                        .from('registros_diarios')
-                        .upsert({
-                            user_id: userId,
-                            fecha: fechaSeleccionada,
-                            consumido_calorias: consumidoCalorias,
-                            consumido_proteinas: consumidoProteinas,
-                            alimentos_consumidos: alimentosConsumidos,
-                            updated_at: new Date()
-                        }, { onConflict: 'user_id,fecha' });
-
-                    console.log("✅ Datos sincronizados con Supabase con éxito.");
+                        console.log("✅ Sincronización con la nube completada con éxito.");
+                    } else {
+                        console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa.");
+                    }
                 } catch (err) {
-                    console.error("❌ Error al guardar en Supabase:", err);
+                    console.error("❌ Error crítico al guardar en Supabase:", err);
                 }
             }
         }
