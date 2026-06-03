@@ -439,7 +439,7 @@
             document.getElementById('cantidad').value = 100;
         });
 
-        // --- FUNCIÓN DE INTERFAZ Y GUARDADO SIN ERRORES DE BARRAS ---
+        // --- FUNCIÓN DE INTERFAZ Y SINCRO EN LA NUBE CORREGIDA ---
         async function actualizarInterfaz(guardarEnSupabase = false) {
             // 1. Pintamos los textos en la pantalla (comprobando que existan)
             const txtCal = document.getElementById('txt-cal');
@@ -451,36 +451,12 @@
             const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
             const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-            // CONTROL DE SEGURIDAD: Solo cambiamos el estilo si las barras realmente existen en el HTML
+            // CONTROL DE SEGURIDAD: Ajuste de barras
             const barCal = document.getElementById('fill-cal');
             const barProt = document.getElementById('fill-prot');
 
-            if (barCal) {
-                barCal.style.width = `${pctCal}%`;
-            } else {
-                console.log("⚠️ Nota: No se encontró la barra de calorías en el HTML (ID bar-cal).");
-            }
-
-            if (barProt) {
-                barProt.style.width = `${pctProt}%`;
-            } else {
-                console.log("⚠️ Nota: No se encontró la barra de proteínas en el HTML (ID bar-prot).");
-            }
-
-            // Pintamos la lista de alimentos en el HTML si existe
-            const lista = document.getElementById('lista-consumidos');
-            if (lista) {
-                lista.innerHTML = '';
-                alimentosConsumidos.forEach((alimento, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'alimento-item';
-                    li.innerHTML = `
-                        <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
-                        <button class="delete-btn" onclick="eliminarAlimento(${index})">❌</button>
-                    `;
-                    lista.appendChild(li);
-                });
-            }
+            if (barCal) barCal.style.width = `${pctCal}%`;
+            if (barProt) barProt.style.width = `${pctProt}%`;
 
             // 2. Guardado en LocalStorage (copia de seguridad local)
             const logDia = {
@@ -490,15 +466,16 @@
             };
             localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
 
-            // 3. ¡GUARDADO EN SUPABASE! (VERSIÓN CORREGIDA Y ROBUSTA)
+            // 3. ¡GUARDADO EN SUPABASE! (Ejecución garantizada)
             if (guardarEnSupabase && isSupabaseConfigured) {
+                console.log("🕵️‍♂️ Detective: Comprobando sesión para guardar...");
                 try {
                     const { data: s } = await supabaseClient.auth.getSession();
                     if (s && s.session) {
                         const userId = s.session.user.id;
                         console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
 
-                        // Usamos la función original de tu script que está probada y funciona
+                        // Usamos la función nativa de tu archivo
                         await syncLogToCloud(userId, fechaSeleccionada, logDia);
 
                         console.log("✅ Sincronización con la nube completada con éxito.");
@@ -509,10 +486,16 @@
                     console.error("❌ Error crítico al guardar en Supabase:", err);
                 }
             }
+
+            // 4. Pintamos la lista de alimentos usando la función dedicada
+            renderizarAlimentosConsumidos();
         }
 
+        // --- FUNCIÓN ÚNICA PARA RENDERIZAR LA LISTA VISUAL ---
         function renderizarAlimentosConsumidos() {
             const listaConsumidos = document.getElementById('lista-consumidos');
+            if (!listaConsumidos) return;
+
             listaConsumidos.innerHTML = '';
 
             if (alimentosConsumidos.length === 0) {
@@ -538,7 +521,8 @@
             });
         }
 
-        window.eliminarAlimentoConsumido = function (index) {
+        // --- FUNCIÓN GLOBAL PARA ELIMINAR UN ALIMENTO ---
+        window.eliminarAlimentoConsumido = async function (index) {
             const item = alimentosConsumidos[index];
             if (!item) return;
 
@@ -546,7 +530,8 @@
             consumidoProteinas = Math.max(0, consumidoProteinas - item.proteinas);
             alimentosConsumidos.splice(index, 1);
 
-            actualizarInterfaz();
+            // Al eliminar también actualizamos la interfaz y guardamos el cambio en la nube
+            await actualizarInterfaz(true);
         }
 
         window.reiniciarDia = async function () {
