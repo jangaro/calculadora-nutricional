@@ -404,8 +404,8 @@
             }
         });
 
-        // Al añadir un alimento (CÓDIGO CORREGIDO)
-        alimentoForm.addEventListener('submit', async (e) => { // <-- Le añadimos 'async' aquí delante
+        // Al añadir un alimento (CÓDIGO CORREGIDO Y ASÍNCRONO)
+        alimentoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const alimentoSelect = document.getElementById('alimento');
@@ -432,10 +432,10 @@
                 proteinas: protCalculadas
             });
 
-            // Forzamos a la interfaz a guardar en LocalStorage y Supabase pasándole 'true'
+            // Forzamos la actualización de la interfaz y la subida a Supabase
             await actualizarInterfaz(true);
 
-            // Limpiamos el buscador y la cantidad para poder meter otro alimento cómodamente
+            // Limpiamos el campo de cantidad para mayor comodidad
             document.getElementById('cantidad').value = 100;
         });
 
@@ -468,7 +468,7 @@
             }
 
             // Pintamos la lista de alimentos en el HTML si existe
-            const lista = document.getElementById('lista-alimentos');
+            const lista = document.getElementById('lista-consumidos');
             if (lista) {
                 lista.innerHTML = '';
                 alimentosConsumidos.forEach((alimento, index) => {
@@ -488,7 +488,7 @@
                 consumidoProteinas: consumidoProteinas,
                 alimentosConsumidos: alimentosConsumidos
             };
-            localStorage.setItem(`nutricalc_${fechaSeleccionada}`, JSON.stringify(logDia));
+            localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
 
             // 3. ¡GUARDADO EN SUPABASE!
             if (guardarEnSupabase && isSupabaseConfigured) {
