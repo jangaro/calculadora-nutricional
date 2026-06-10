@@ -67,34 +67,31 @@
             </div>
 
             <header>
-                <h1>NutriCalc 📊</h1>
+                <h1>NutriJUAN 📊</h1>
                 <p>Calculadora diaria de calorías y proteínas</p>
                 <div class="date-selector-container">
                     <label for="fecha-registro">Día Seleccionado:</label>
                     <input type="date" id="fecha-registro">
                 </div>
-                <div class="header-actions" style="margin-top: 15px; margin-bottom: 0; text-align: center;">
-                    <a href="tendencias.html" class="nav-link">📊 Tendencias Semanales</a>
+                <div class="header-actions"
+                    style="margin-top: 24px; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <a href="tendencias.html" class="nav-link" style="display: flex; align-items: center; gap: 6px;">📈
+                        Tendencias</a>
+
+                    <div
+                        style="background-color: var(--card-bg); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; gap: 4px;">
+                        <button id="btn-vista-diario" class="btn-blue"
+                            style="width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: var(--radius-sm); margin: 0; box-shadow: none;">📅
+                            Diario</button>
+                        <button id="btn-vista-datos" class="logout-btn"
+                            style="width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: var(--radius-sm); border: none; margin: 0; background: transparent;">⚙️
+                            Perfil</button>
+                    </div>
                 </div>
             </header>
 
-            <main class="grid-layout">
-                <div class="column">
-                    <section style="margin-bottom: 25px;">
-                        <h2>1. Tus Datos</h2>
-                        <form id="perfil-form">
-                            <div class="form-group">
-                                <label for="peso">Peso (kg):</label>
-                                <input type="number" id="peso" value="70" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="objetivo-cal">Meta Calorías (kcal):</label>
-                                <input type="number" id="objetivo-cal" value="2000" required>
-                            </div>
-                            <button type="submit">Actualizar Objetivos</button>
-                        </form>
-                    </section>
-
+            <main id="vista-diario" class="grid-layout">
+                <div class="column" style="display: flex; flex-direction: column; gap: 30px;">
                     <section>
                         <h2>
                             <span>2. Registrar Alimento</span>
@@ -108,7 +105,16 @@
                             <div class="form-group">
                                 <label for="alimento">Alimento:</label>
                                 <select id="alimento">
-                                    <!-- Se carga dinámicamente desde JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipo-comida">Momento del Día / Comida:</label>
+                                <select id="tipo-comida">
+                                    <option value="Desayuno">🍳 Desayuno</option>
+                                    <option value="Almuerzo">🥪 Almuerzo</option>
+                                    <option value="Comida">🍲 Comida</option>
+                                    <option value="Merienda">🍌 Merienda</option>
+                                    <option value="Cena">🥩 Cena</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -118,44 +124,100 @@
                             <button type="submit" class="btn-blue">Añadir al Plato</button>
                         </form>
                     </section>
-                </div>
 
-                <div class="column" style="display: flex; flex-direction: column; gap: 20px;">
                     <section>
                         <h2>3. Estado del Día</h2>
 
                         <div class="progress-container">
                             <div class="counter-text">
-                                <span>Calorías:</span>
+                                <span>Calorías</span>
                                 <span id="txt-cal">0 / 2000 kcal</span>
                             </div>
-                            <div class="progress-bar">
-                                <div id="fill-cal" class="progress-fill"></div>
+                            <div class="progress-bar"
+                                style="height: 22px; background-color: rgba(15, 23, 42, 0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                                <div id="fill-cal" class="progress-fill"
+                                    style="background: linear-gradient(90deg, #3b82f6, #60a5fa); box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="progress-container">
+                        <div class="progress-container" style="margin-top: 16px;">
                             <div class="counter-text">
-                                <span>Proteínas (2g/kg):</span>
+                                <span>Proteínas</span>
                                 <span id="txt-prot">0 / 140 g</span>
                             </div>
-                            <div class="progress-bar">
-                                <div id="fill-prot" class="progress-fill"></div>
+                            <div class="progress-bar"
+                                style="height: 22px; background-color: rgba(15, 23, 42, 0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                                <div id="fill-prot" class="progress-fill"
+                                    style="background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);">
+                                </div>
                             </div>
                         </div>
 
                         <button onclick="reiniciarDia()" class="btn-red" style="margin-top: 15px;">Reiniciar
                             Día</button>
                     </section>
+                </div>
 
-                    <section style="flex-grow: 1;">
+                <div class="column" style="display: flex; flex-direction: column; height: 100%;">
+                    <section style="flex: 1; display: flex; flex-direction: column; height: 100%; min-height: 100%;">
                         <h2>4. Alimentos de Hoy</h2>
-                        <div id="lista-consumidos" class="food-list" style="max-height: 250px;">
-                            <!-- Cargado dinámicamente desde JS -->
+                        <div id="lista-consumidos" class="food-list" style="flex: 1; overflow-y: auto;">
                         </div>
                     </section>
                 </div>
             </main>
+
+            <div id="vista-datos"
+                style="display: none; max-width: 500px; margin: 0 auto; flex-direction: column; gap: 30px;">
+
+                <section>
+                    <h2><span>⚙️ 1. Configurar Mis Datos</span></h2>
+                    <form id="perfil-form">
+                        <div class="form-group">
+                            <label for="peso">Peso Actual (kg):</label>
+                            <input type="number" id="peso" value="70" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="objetivo-cal">Meta de Calorías Diarias (kcal):</label>
+                            <input type="number" id="objetivo-cal" value="2000" required>
+                        </div>
+                        <button type="submit" class="btn-blue">Guardar y Actualizar Objetivos</button>
+                    </form>
+                </section>
+
+                <section>
+                    <h2><span>🔒 2. Seguridad de la Cuenta</span></h2>
+                    <form id="password-form">
+                        <div class="form-group">
+                            <label for="nueva-password">Nueva Contraseña:</label>
+                            <input type="password" id="nueva-password" placeholder="Mínimo 6 caracteres" minlength="6"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmar-password">Confirmar Nueva Contraseña:</label>
+                            <input type="password" id="confirmar-password" placeholder="Repite la contraseña"
+                                minlength="6" required>
+                        </div>
+                        <div id="password-msg"
+                            style="display: none; font-size: 0.88rem; font-weight: 500; text-align: center; padding: 10px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                        </div>
+
+                        <button type="submit" class="btn-blue" style="background-color: var(--secondary);">Actualizar
+                            Contraseña</button>
+                    </form>
+                </section>
+
+            </div>
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
@@ -415,21 +477,27 @@
             const alimento = todosLosAlimentosGlobal[index];
             const cantidad = parseFloat(document.getElementById('cantidad').value);
 
+            // ¡NUEVO! Capturamos el tipo de comida del desplegable
+            const tipoComida = document.getElementById('tipo-comida').value;
+
             if (!alimento || isNaN(cantidad) || cantidad <= 0) return;
 
             const factor = cantidad / 100;
-            const calCalculadas = alimento.calorias * factor;
-            const protCalculadas = alimento.proteinas * factor;
+            // Redondeamos a 1 decimal para que quede súper limpio
+            const calCalculadas = parseFloat((alimento.calorias * factor).toFixed(1));
+            const protCalculadas = parseFloat((alimento.proteinas * factor).toFixed(1));
 
             consumidoCalorias += calCalculadas;
             consumidoProteinas += protCalculadas;
 
-            // Añadir a la lista de consumidos
+            // Añadir a la lista de consumidos (¡Ahora con categoría e ID único!)
             alimentosConsumidos.push({
+                id_interno: Date.now(), // Etiqueta de tiempo para que borrar y clonar no de fallos
                 nombre: alimento.nombre,
                 cantidad: cantidad,
                 calorias: calCalculadas,
-                proteinas: protCalculadas
+                proteinas: protCalculadas,
+                comida: tipoComida // <--- Propiedad mágica de clasificación
             });
 
             // Forzamos la actualización de la interfaz y la subida a Supabase
@@ -439,49 +507,110 @@
             document.getElementById('cantidad').value = 100;
         });
 
-        // -- FUNCIÓN DE INTERFAZ Y GUARDADO SIN ERRORES DE BARRAS ---
+        // -- FUNCIÓN DE INTERFAZ Y GUARDADO (ADAPTADA CON GRUPOS Y BARRAS) ---
         async function actualizarInterfaz(guardarEnSupabase = false) {
-            // 1. Pintamos los textos en la pantalla (comprobando que existan)
+            // 1. Pintamos los textos y barras
             const txtCal = document.getElementById('txt-cal');
             const txtProt = document.getElementById('txt-prot');
-
 
             if (txtCal) txtCal.innerText = `${Math.round(consumidoCalorias.toFixed(1))} / ${metaCalorias} kcal`;
             if (txtProt) txtProt.innerText = `${consumidoProteinas.toFixed(1)} / ${metaProteinas} g`;
             const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
             const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
 
-            // CONTROL DE SEGURIDAD: Solo cambiamos el estilo si las barras realmente existen en el HTML
             const barCal = document.getElementById('fill-cal');
             const barProt = document.getElementById('fill-prot');
 
             if (barCal) barCal.style.width = `${pctCal}%`;
             if (barProt) barProt.style.width = `${pctProt}%`;
 
-            // Pintamos la lista de alimentos en el HTML si existe
+            // 2. Pintamos la lista de alimentos CLASIFICADA
             const lista = document.getElementById('lista-consumidos');
             if (lista) {
-                lista.innerHTML = '';
-                alimentosConsumidos.forEach((alimento, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'alimento-item';
-                    li.innerHTML = `
-                        <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
-                        <button class="delete-btn" onclick="eliminarAlimentoConsumido(${index})">❌</button>
-                    `;
-                    lista.appendChild(li);
+                lista.innerHTML = ''; // Limpiamos la lista
+
+                const categorias = ["Desayuno", "Almuerzo", "Comida", "Merienda", "Cena", "Otros"];
+                const agrupados = { "Desayuno": [], "Almuerzo": [], "Comida": [], "Merienda": [], "Cena": [], "Otros": [] };
+
+                // Agrupamos los alimentos actuales
+                alimentosConsumidos.forEach(item => {
+                    if (item.comida && agrupados[item.comida]) {
+                        agrupados[item.comida].push(item);
+                    } else {
+                        agrupados["Otros"].push(item); // Para alimentos antiguos sin clasificar
+                    }
+                });
+
+                categorias.forEach(cat => {
+                    const itemsCat = agrupados[cat];
+                    if (cat === "Otros" && itemsCat.length === 0) return; // Ocultamos "Otros" si está vacío
+
+                    // Contenedor de la comida
+                    const divCat = document.createElement('div');
+                    divCat.style.marginBottom = '20px';
+
+                    // Cabecera con Título y Botón de Clonar
+                    const cabecera = document.createElement('div');
+                    cabecera.style.display = 'flex';
+                    cabecera.style.justifyContent = 'space-between';
+                    cabecera.style.alignItems = 'center';
+                    cabecera.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+                    cabecera.style.paddingBottom = '5px';
+                    cabecera.style.marginBottom = '10px';
+
+                    let icono = cat;
+                    if (cat === "Desayuno") icono = "🍳 Desayuno";
+                    if (cat === "Almuerzo") icono = "🥪 Almuerzo";
+                    if (cat === "Comida") icono = "🍲 Comida";
+                    if (cat === "Merienda") icono = "🍌 Merienda";
+                    if (cat === "Cena") icono = "🥩 Cena";
+
+                    cabecera.innerHTML = `<h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">${icono}</h4>`;
+
+                    // Botón mágico (solo en comidas oficiales)
+                    if (cat !== "Otros") {
+                        const btnClonar = document.createElement('button');
+                        btnClonar.innerHTML = '🔄 Copiar ayer';
+                        btnClonar.className = 'logout-btn';
+                        btnClonar.style.padding = '2px 8px';
+                        btnClonar.style.fontSize = '0.75rem';
+                        btnClonar.style.border = '1px solid var(--border)';
+                        btnClonar.onclick = () => clonarComidaDeAyer(cat);
+                        cabecera.appendChild(btnClonar);
+                    }
+                    divCat.appendChild(cabecera);
+
+                    // Lista de alimentos de esta categoría
+                    if (itemsCat.length === 0) {
+                        divCat.innerHTML += `<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin: 0 0 0 10px;">Vacío</p>`;
+                    } else {
+                        itemsCat.forEach(alimento => {
+                            const li = document.createElement('div');
+                            li.className = 'alimento-item';
+                            li.style.display = 'flex';
+                            li.style.justifyContent = 'space-between';
+                            li.style.alignItems = 'center';
+                            li.style.marginBottom = '6px';
+
+                            // ¡ATENCIÓN A LA FUNCIÓN DE BORRADO! Pasamos el id_interno o el nombre por seguridad si es muy antiguo
+                            const idSeguro = alimento.id_interno ? alimento.id_interno : `'${alimento.nombre}'`;
+
+                            li.innerHTML = `
+                                <span><strong>${alimento.nombre}</strong> - ${alimento.cantidad}g (${Math.round(alimento.calorias)} kcal, ${Math.round(alimento.proteinas)}g P)</span>
+                                <button class="delete-btn" onclick="eliminarAlimentoPorId(${idSeguro})">❌</button>
+                            `;
+                            divCat.appendChild(li);
+                        });
+                    }
+                    lista.appendChild(divCat);
                 });
             }
 
-            // 2. Guardado en LocalStorage (copia de seguridad local)
-            const logDia = {
-                consumidoCalorias: consumidoCalorias,
-                consumidoProteinas: consumidoProteinas,
-                alimentosConsumidos: alimentosConsumidos
-            };
+            // 3. Guardado Local
+            const logDia = { consumidoCalorias, consumidoProteinas, alimentosConsumidos };
             localStorage.setItem(`nutricalc_log_${fechaSeleccionada}`, JSON.stringify(logDia));
 
-            // 3. ¡GUARDADO EN SUPABASE!
+            // 4. Guardado en Supabase (Usando tu función exacta)
             if (guardarEnSupabase && isSupabaseConfigured) {
                 console.log("🕵️‍♂️ Detective: Comprobando sesión del usuario...");
                 try {
@@ -489,21 +618,14 @@
                     if (s && s.session) {
                         const userId = s.session.user.id;
                         console.log("🚀 Enviando datos a Supabase para el usuario:", userId, "en la fecha:", fechaSeleccionada);
-
-                        // Usamos la función nativa de tu archivo
                         await syncLogToCloud(userId, fechaSeleccionada, logDia);
-
                         console.log("✅ Sincronización con la nube completada con éxito.");
-                    } else {
-                        console.log("⚠️ Nota: No se guarda en Supabase porque no se detecta ninguna sesión de usuario activa.");
                     }
                 } catch (err) {
                     console.error("❌ Error crítico al guardar en Supabase:", err);
                 }
             }
-
-            // 4. Renderizar visualmente la lista abajo
-            renderizarAlimentosConsumidos();
+            // He quitado la llamada a "renderizarAlimentosConsumidos();" porque ya lo hacemos aquí arriba de forma clasificada.
         }
 
         // --- FUNCIÓN ÚNICA PARA RENDERIZAR LA LISTA VISUAL ---
@@ -577,10 +699,7 @@
             alimentosSelect.innerHTML = '';
 
             const alimentosPorDefecto = [
-                { nombre: "Pechuga de Pollo", calorias: 165, proteinas: 31 },
-                { nombre: "Arroz Cocido", calorias: 130, proteinas: 3 },
-                { nombre: "Huevo Entero", calorias: 155, proteinas: 13 },
-                { nombre: "Yogur Griego", calorias: 60, proteinas: 10 }
+
             ];
 
             const alimentosPersonalizados = JSON.parse(localStorage.getItem('alimentosPersonalizados')) || [];
@@ -690,6 +809,176 @@
             }
             await cargarDatosDeFecha(fechaSeleccionada);
         }
+
+
+
+        // --- CONTROLADOR DE VISTAS ACTUALIZADO (AJUSTADO PARA FLEXBOX) ---
+        const btnVistaDiario = document.getElementById('btn-vista-diario');
+        const btnVistaDatos = document.getElementById('btn-vista-datos');
+        const vistaDiario = document.getElementById('vista-diario');
+        const vistaDatos = document.getElementById('vista-datos');
+
+        btnVistaDiario.addEventListener('click', () => {
+            vistaDiario.style.display = 'grid';
+            vistaDatos.style.display = 'none';
+
+            // Estilo activo para Diario, transparente para Perfil
+            btnVistaDiario.className = 'btn-blue';
+            btnVistaDatos.className = 'logout-btn';
+            btnVistaDatos.style.background = 'transparent';
+        });
+
+        btnVistaDatos.addEventListener('click', () => {
+            vistaDiario.style.display = 'none';
+            vistaDatos.style.display = 'flex'; // ¡Cambiado de 'block' a 'flex' para activar el gap!
+
+            // Estilo activo para Perfil, transparente para Diario
+            btnVistaDatos.className = 'btn-blue';
+            btnVistaDiario.className = 'logout-btn';
+            btnVistaDiario.style.background = 'transparent';
+        });
+
+        // --- GESTIÓN DE CAMBIO DE CONTRASEÑA EN LA NUBE ---
+        const passwordForm = document.getElementById('password-form');
+        const nuevaPasswordInput = document.getElementById('nueva-password');
+        const confirmarPasswordInput = document.getElementById('confirmar-password');
+        const passwordMsg = document.getElementById('password-msg');
+
+        if (passwordForm) {
+            passwordForm.addEventListener('submit', async (e) => {
+                e.preventDefault(); // Evitamos que la página se recargue
+
+                const nuevaPassword = nuevaPasswordInput.value;
+                const confirmarPassword = confirmarPasswordInput.value;
+
+                // 1. Validar que las contraseñas coincidan localmente
+                if (nuevaPassword !== confirmarPassword) {
+                    passwordMsg.style.display = 'block';
+                    passwordMsg.style.backgroundColor = 'var(--danger-light)';
+                    passwordMsg.style.color = '#fca5a5';
+                    passwordMsg.style.border = '1px solid hsla(350, 80%, 55%, 0.2)';
+                    passwordMsg.innerText = "❌ Las contraseñas introducidas no coinciden.";
+                    return;
+                }
+
+                // 2. Intentar actualizar en Supabase
+                if (isSupabaseConfigured) {
+                    try {
+                        // Método oficial del SDK de Supabase para actualizar datos del usuario logueado
+                        const { data, error } = await supabaseClient.auth.updateUser({
+                            password: nuevaPassword
+                        });
+
+                        if (error) {
+                            passwordMsg.style.display = 'block';
+                            passwordMsg.style.backgroundColor = 'var(--danger-light)';
+                            passwordMsg.style.color = '#fca5a5';
+                            passwordMsg.style.border = '1px solid hsla(350, 80%, 55%, 0.2)';
+                            passwordMsg.innerText = "❌ Error de Supabase: " + error.message;
+                        } else {
+                            // Éxito rotundo
+                            passwordMsg.style.display = 'block';
+                            passwordMsg.style.backgroundColor = 'var(--primary-light)';
+                            passwordMsg.style.color = '#34d399';
+                            passwordMsg.style.border = '1px solid hsla(142, 72%, 40%, 0.2)';
+                            passwordMsg.innerText = "✅ ¡Contraseña actualizada con éxito!";
+
+                            // Limpiamos los campos del formulario
+                            passwordForm.reset();
+
+                            // Ocultamos el mensaje automáticamente a los 4 segundos
+                            setTimeout(() => {
+                                passwordMsg.style.display = 'none';
+                            }, 4000);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Hubo un problema de conexión con el servidor.");
+                    }
+                } else {
+                    alert("Supabase no está configurado de forma correcta.");
+                }
+            });
+        }
+
+        // --- NUEVA FUNCIÓN DE BORRADO SEGURO ---
+        async function eliminarAlimentoPorId(idObtenido) {
+            // Buscamos cuál es el índice real del elemento en el array global
+            const indexReal = alimentosConsumidos.findIndex(a => a.id_interno === idObtenido || a.nombre === idObtenido);
+
+            if (indexReal !== -1) {
+                const item = alimentosConsumidos[indexReal];
+                // Restamos macros
+                consumidoCalorias -= item.calorias;
+                consumidoProteinas -= item.proteinas;
+                // Prevenimos que baje de 0
+                if (consumidoCalorias < 0) consumidoCalorias = 0;
+                if (consumidoProteinas < 0) consumidoProteinas = 0;
+
+                // Lo sacamos del array
+                alimentosConsumidos.splice(indexReal, 1);
+
+                // Actualizamos pantalla y nube
+                await actualizarInterfaz(true);
+            }
+        }
+
+        // --- FUNCIÓN CLONAR (ADAPTADA A TU CÓDIGO) ---
+        async function clonarComidaDeAyer(categoria) {
+            if (!isSupabaseConfigured) return;
+
+            // Calculamos ayer
+            const fechaObj = new Date(fechaSeleccionada);
+            fechaObj.setDate(fechaObj.getDate() - 1);
+            const yyyy = fechaObj.getFullYear();
+            const mm = String(fechaObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(fechaObj.getDate()).padStart(2, '0');
+            const fechaAyerStr = `${yyyy}-${mm}-${dd}`;
+
+            try {
+                const { data: s } = await supabaseClient.auth.getSession();
+                if (!s || !s.session) return;
+                const userId = s.session.user.id;
+
+                // Buscamos ayer en tu tabla 'diarios'
+                const { data, error } = await supabaseClient
+                    .from('diarios')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('fecha', fechaAyerStr)
+                    .single();
+
+                if (error || !data || !data.datos || !data.datos.alimentosConsumidos) {
+                    alert(`No se encontraron registros en el día de ayer.`);
+                    return;
+                }
+
+                // Filtramos la comida elegida (ej. Desayuno)
+                const alimentosDeAyer = data.datos.alimentosConsumidos;
+                const clonados = alimentosDeAyer.filter(item => item.comida === categoria);
+
+                if (clonados.length === 0) {
+                    alert(`Ayer no registraste nada en: ${categoria}`);
+                    return;
+                }
+
+                // Los añadimos al día actual generando un ID nuevo a cada uno
+                clonados.forEach(item => {
+                    const copia = { ...item, id_interno: Date.now() + Math.random() };
+                    alimentosConsumidos.push(copia);
+                    consumidoCalorias += copia.calorias;
+                    consumidoProteinas += copia.proteinas;
+                });
+
+                // Como usamos tu función actualizarInterfaz(true), esto ya invoca tu syncLogToCloud automático
+                await actualizarInterfaz(true);
+
+            } catch (err) {
+                console.error("Error al clonar:", err);
+            }
+        }
+
+
 
         // ¡Arrancamos la aplicación limpia!
         inicializarApp();

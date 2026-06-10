@@ -1,47 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    /* Mantenemos tus colores vivos para las marcas e indicadores */
     --primary-hsl: 142, 72%, 40%;
     --primary: hsl(var(--primary-hsl));
     --primary-hover: hsl(142, 72%, 35%);
-    --primary-light: hsla(var(--primary-hsl), 0.15);
+    --primary-light: hsla(var(--primary-hsl), 0.1);
 
     --secondary-hsl: 217, 91%, 60%;
     --secondary: hsl(var(--secondary-hsl));
     --secondary-hover: hsl(217, 91%, 50%);
-    --secondary-light: hsla(var(--secondary-hsl), 0.15);
+    --secondary-light: hsla(var(--secondary-hsl), 0.1);
 
     --danger-hsl: 350, 80%, 55%;
     --danger: hsl(var(--danger-hsl));
     --danger-hover: hsl(350, 80%, 48%);
-    --danger-light: hsla(var(--danger-hsl), 0.15);
+    --danger-light: hsla(var(--danger-hsl), 0.1);
 
-    /* NUEVA PALETA: Transformación a Modo Oscuro */
-    --dark: #f8fafc;
-    /* Ahora 'dark' es el texto principal (blanco/claro) */
-    --dark-muted: #cbd5e1;
-    /* Texto intermedio */
-    --text-muted: #94a3b8;
-    /* Texto secundario y placeholders */
-
-    --light-bg: #0f172a;
-    /* El fondo general ahora es un azul oscuro profundo (antiguo slate-900) */
-    --card-bg: #1e293b;
-    /* Las tarjetas son un gris azulado sutilmente más claro (slate-800) */
-    --border: #334155;
-    /* Bordes oscuros integrados (slate-700) */
-    --input-bg: #1e293b;
-    /* Fondo para las cajas de texto */
+    --dark: #0f172a;
+    --dark-muted: #334155;
+    --light-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-muted: #64748b;
 
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 20px;
 
-    /* Sombras adaptadas para superficies oscuras */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 8px 24px rgba(149, 157, 165, 0.12);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.05);
 
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -76,8 +64,7 @@ header {
 header h1 {
     font-size: 3rem;
     font-weight: 800;
-    /* Gradiente optimizado para resaltar sobre fondo oscuro */
-    background: linear-gradient(135deg, #ffffff 30%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--dark) 30%, var(--secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 8px;
@@ -95,8 +82,7 @@ header p {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
     gap: 30px;
-    align-items: stretch;
-    /* Cambiado de 'start' a 'stretch' para nivelar las dos columnas */
+    align-items: start;
 }
 
 @media (max-width: 768px) {
@@ -120,15 +106,12 @@ section {
     padding: 30px;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    /* Borde casi invisible */
+    border: 1px solid var(--border);
     transition: var(--transition);
 }
 
 section:hover {
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-    border-color: rgba(59, 130, 246, 0.2);
-    /* Se ilumina levemente en azul */
+    box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
 }
 
@@ -180,19 +163,8 @@ select {
 input:focus,
 select:focus {
     border-color: var(--secondary);
-    background-color: var(--input-bg);
-    box-shadow: 0 0 0 4px var(--secondary-light);
-}
-
-input::placeholder {
-    color: var(--text-muted);
-    opacity: 0.7;
-}
-
-/* Color especial para las opciones del desplegable select en modo oscuro */
-select option {
     background-color: var(--card-bg);
-    color: var(--dark);
+    box-shadow: 0 0 0 4px var(--secondary-light);
 }
 
 /* Botones y Enlaces */
@@ -212,13 +184,13 @@ button {
     justify-content: center;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 12px hsla(142, 72%, 40%, 0.25);
+    box-shadow: 0 4px 12px hsla(142, 72%, 40%, 0.2);
 }
 
 button:hover {
     background-color: var(--primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px hsla(142, 72%, 40%, 0.4);
+    box-shadow: 0 6px 16px hsla(142, 72%, 40%, 0.3);
 }
 
 button:active {
@@ -227,29 +199,28 @@ button:active {
 
 .btn-blue {
     background-color: var(--secondary);
-    box-shadow: 0 4px 12px hsla(217, 91%, 60%, 0.25);
+    box-shadow: 0 4px 12px hsla(217, 91%, 60%, 0.2);
 }
 
 .btn-blue:hover {
     background-color: var(--secondary-hover);
-    box-shadow: 0 6px 16px hsla(217, 91%, 60%, 0.4);
+    box-shadow: 0 6px 16px hsla(217, 91%, 60%, 0.3);
 }
 
 .btn-red {
     background-color: var(--danger);
-    box-shadow: 0 4px 12px hsla(350, 80%, 55%, 0.25);
+    box-shadow: 0 4px 12px hsla(350, 80%, 55%, 0.2);
 }
 
 .btn-red:hover {
     background-color: var(--danger-hover);
-    box-shadow: 0 6px 16px hsla(350, 80%, 55%, 0.4);
+    box-shadow: 0 6px 16px hsla(350, 80%, 55%, 0.3);
 }
 
 .nav-link {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #93c5fd;
-    /* Azul más claro para contraste */
+    color: var(--secondary);
     text-decoration: none;
     padding: 6px 12px;
     border-radius: var(--radius-sm);
@@ -311,12 +282,12 @@ button:active {
 
 #fill-cal {
     background: linear-gradient(90deg, var(--secondary) 0%, #60a5fa 100%);
-    box-shadow: 0 2px 6px hsla(217, 91%, 60%, 0.4);
+    box-shadow: 0 2px 6px hsla(217, 91%, 60%, 0.3);
 }
 
 #fill-prot {
     background: linear-gradient(90deg, var(--primary) 0%, #34d399 100%);
-    box-shadow: 0 2px 6px hsla(142, 72%, 40%, 0.4);
+    box-shadow: 0 2px 6px hsla(142, 72%, 40%, 0.3);
 }
 
 /* Listas de Alimentos */
@@ -359,7 +330,7 @@ button:active {
 }
 
 .food-item:hover {
-    background-color: #1e293b;
+    background-color: white;
     border-color: var(--secondary);
     box-shadow: var(--shadow-sm);
     transform: translateX(2px);
@@ -387,8 +358,7 @@ button:active {
     width: auto;
     padding: 6px 12px;
     background-color: transparent;
-    color: #fca5a5;
-    /* Rojo más claro para contrastar con el fondo oscuro */
+    color: var(--danger);
     border: 1px solid var(--danger-light);
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
@@ -400,7 +370,7 @@ button:active {
     background-color: var(--danger);
     color: white;
     border-color: var(--danger);
-    box-shadow: 0 4px 8px hsla(350, 80%, 55%, 0.3);
+    box-shadow: 0 4px 8px hsla(350, 80%, 55%, 0.2);
 }
 
 /* Notificación Flotante (Toast) */
@@ -408,18 +378,17 @@ button:active {
     position: fixed;
     top: 24px;
     right: 24px;
-    background-color: #0f172a;
+    background-color: var(--dark);
     color: white;
     padding: 16px 24px;
     border-radius: var(--radius-md);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
     gap: 12px;
     z-index: 1000;
     animation: slideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
     font-weight: 500;
-    border: 1px solid var(--border);
     border-left: 4px solid var(--primary);
 }
 
@@ -511,13 +480,13 @@ button:active {
 }
 
 .stat-value.calorias-color {
-    background: linear-gradient(135deg, #60a5fa 30%, #a855f7 100%);
+    background: linear-gradient(135deg, var(--secondary) 30%, #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .stat-value.proteinas-color {
-    background: linear-gradient(135deg, #34d399 30%, #2dd4bf 100%);
+    background: linear-gradient(135deg, var(--primary) 30%, #34d399 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -585,7 +554,7 @@ button:active {
 }
 
 .chart-bar-cal:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.1);
     opacity: 0.9;
 }
 
@@ -596,7 +565,7 @@ button:active {
 }
 
 .chart-bar-prot:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.1);
     opacity: 0.9;
 }
 
@@ -609,11 +578,11 @@ button:active {
 .grid-line {
     stroke: var(--border);
     stroke-width: 1;
-    stroke-opacity: 0.3;
+    stroke-opacity: 0.5;
 }
 
 .axis-line {
-    stroke: var(--border);
+    stroke: var(--dark-muted);
     stroke-width: 1.5;
 }
 
@@ -664,7 +633,7 @@ button:active {
     font-size: 1.8rem;
     font-weight: 800;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #ffffff 30%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--dark) 30%, var(--secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     border: none;
@@ -724,7 +693,7 @@ button:active {
 }
 
 .auth-error {
-    color: #fca5a5;
+    color: var(--danger);
     background-color: var(--danger-light);
     padding: 12px;
     border-radius: var(--radius-md);
@@ -732,7 +701,7 @@ button:active {
     font-weight: 500;
     margin-bottom: 20px;
     text-align: center;
-    border: 1px solid hsla(350, 80%, 55%, 0.3);
+    border: 1px solid hsla(350, 80%, 55%, 0.2);
 }
 
 /* Indicador de Usuario Logueado */
@@ -769,26 +738,10 @@ button:active {
     font-weight: 600;
     cursor: pointer;
     box-shadow: none;
-    transition: var(--transition);
 }
 
 .logout-btn:hover {
     background-color: var(--danger-light);
-    color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.4);
-}
-
-/* Forzar a que el icono del calendario nativo sea blanco */
-input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(1.5);
-    cursor: pointer;
-    border-radius: 4px;
-    padding: 2px;
-    transition: var(--transition);
-}
-
-/* Un pequeño efecto visual sutil cuando pasas el ratón por encima del icono */
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-    background-color: var(--secondary-light);
-    transform: scale(1.1);
+    color: var(--danger);
+    border-color: var(--danger-light);
 }
