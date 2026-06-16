@@ -290,7 +290,7 @@ alimentoForm.addEventListener('submit', async (e) => {
 
 // --- FUNCIÓN CLONAR COMPLETAMENTE REPARADA ---
 window.clonarComidaDeAyer = async function (categoria) {
-    console.error("clonando");
+
     // Calculamos ayer evitando desfases horariales de zonas UTC
     const partes = fechaSeleccionada.split('-');
     const anio = parseInt(partes[0]);
