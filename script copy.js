@@ -1,3 +1,75 @@
+// --- JAVASCRIPT: Lógica de la Aplicación ---
+/*
+
+
+
+
+// Variables globales de estado
+let metaCalorias = 2000;
+let metaProteinas = 140; // Por defecto para un peso de 70kg (70 * 2g)
+
+let consumidoCalorias = 0;
+let consumidoProteinas = 0;
+
+// Elementos del DOM
+const perfilForm = document.getElementById('perfil-form');
+const alimentoForm = document.getElementById('alimento-form');
+const btnReiniciar = document.getElementById('btn-reiniciar');
+
+// EVENTO: Al actualizar el perfil (Datos del usuario)
+perfilForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const peso = parseFloat(document.getElementById('peso').value);
+    metaCalorias = parseFloat(document.getElementById('objetivo-cal').value);
+    metaProteinas = peso * 2; // Regla nutricional: 2g por kg de peso
+
+    actualizarInterfaz();
+});
+
+// EVENTO: Al añadir un alimento al plato
+alimentoForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // Obtenemos el valor del select "calorias,proteinas" (ej: "165,31")
+    const selectValue = document.getElementById('alimento').value;
+    const [calBase, protBase] = selectValue.split(',').map(Number);
+    const cantidad = parseFloat(document.getElementById('cantidad').value);
+
+    // Calculamos la proporción según los gramos ingresados (base por cada 100g)
+    const factor = cantidad / 100;
+    consumidoCalorias += calBase * factor;
+    consumidoProteinas += protBase * factor;
+
+    actualizarInterfaz();
+});
+
+// EVENTO: Al pulsar el botón de reiniciar el día
+btnReiniciar.addEventListener('click', () => {
+    consumidoCalorias = 0;
+    consumidoProteinas = 0;
+    actualizarInterfaz();
+});
+
+// FUNCIÓN: Renderizar los datos en pantalla y actualizar barras de progreso
+function actualizarInterfaz() {
+    // 1. Actualizar los textos informativos
+    document.getElementById('txt-cal').innerText = `${Math.round(consumidoCalorias)} / ${metaCalorias} kcal`;
+    document.getElementById('txt-prot').innerText = `${Math.round(consumidoProteinas)} / ${metaProteinas} g`;
+
+    // 2. Calcular los porcentajes correspondientes (con un tope máximo del 100%)
+    const pctCal = Math.min((consumidoCalorias / metaCalorias) * 100, 100);
+    const pctProt = Math.min((consumidoProteinas / metaProteinas) * 100, 100);
+
+    // 3. Modificar los estilos CSS dinámicamente mediante el DOM
+    document.getElementById('fill-cal').style.width = `${pctCal}%`;
+    document.getElementById('fill-prot').style.width = `${pctProt}%`;
+}
+
+// Inicializar la aplicación mostrando los valores iniciales al cargar la página
+actualizarInterfaz();*/
+
+
+
 // Determinar si Supabase está correctamente configurado
 const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' &&
     typeof SUPABASE_ANON_KEY !== 'undefined' &&
@@ -26,10 +98,8 @@ const fechaInput = document.getElementById('fecha-registro');
 const authForm = document.getElementById('auth-form');
 
 // Inicializar campos de entrada con los valores por defecto
-const inputPeso = document.getElementById('peso');
-const inputObjetivo = document.getElementById('objetivo-cal');
-if (inputPeso) inputPeso.value = peso;
-if (inputObjetivo) inputObjetivo.value = metaCalorias;
+document.getElementById('peso').value = peso;
+document.getElementById('objetivo-cal').value = metaCalorias;
 
 // --- Gestión de Autenticación con Supabase ---
 
@@ -85,11 +155,8 @@ if (isSupabaseConfigured) {
     peso = parseFloat(localStorage.getItem('peso')) || 70;
     metaCalorias = parseFloat(localStorage.getItem('metaCalorias')) || 2000;
     metaProteinas = parseFloat(localStorage.getItem('metaProteinas')) || 140;
-    // Inicializar campos de entrada con los valores por defecto de forma segura
-    const inputPeso = document.getElementById('peso');
-    const inputObjetivo = document.getElementById('objetivo-cal');
-    if (inputPeso) inputPeso.value = peso;
-    if (inputObjetivo) inputObjetivo.value = metaCalorias;
+    document.getElementById('peso').value = peso;
+    document.getElementById('objetivo-cal').value = metaCalorias;
 }
 
 // Registrar / Iniciar Sesión submit handler
@@ -288,95 +355,6 @@ alimentoForm.addEventListener('submit', async (e) => {
     document.getElementById('cantidad').value = 100;
 });
 
-// --- FUNCIÓN CLONAR COMPLETAMENTE REPARADA ---
-window.clonarComidaDeAyer = async function (categoria) {
-    console.error("clonando");
-    // Calculamos ayer evitando desfases horariales de zonas UTC
-    const partes = fechaSeleccionada.split('-');
-    const anio = parseInt(partes[0]);
-    const mes = parseInt(partes[1]) - 1;
-    const dia = parseInt(partes[2]);
-
-    const fechaObj = new Date(anio, mes, dia);
-    fechaObj.setDate(fechaObj.getDate() - 1);
-
-    const yyyy = fechaObj.getFullYear();
-    const mm = String(fechaObj.getMonth() + 1).padStart(2, '0');
-    const dd = String(fechaObj.getDate()).padStart(2, '0');
-    const fechaAyerStr = `${yyyy}-${mm}-${dd}`;
-
-    let alimentosDeAyer = [];
-
-    try {
-        // 1. Si está Supabase configurado, buscamos en la base de datos correcta
-        if (isSupabaseConfigured) {
-            const { data: s } = await supabaseClient.auth.getSession();
-            if (s && s.session) {
-                const userId = s.session.user.id;
-                const { data, error } = await supabaseClient
-                    .from('registros_diarios')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .eq('fecha', fechaAyerStr)
-                    .maybeSingle();
-
-                if (!error && data && data.alimentos_consumidos) {
-                    alimentosDeAyer = data.alimentos_consumidos;
-                }
-            }
-        }
-
-        // 2. Si está en modo offline o no devolvió datos la nube, buscamos en el LocalStorage
-        if (alimentosDeAyer.length === 0) {
-            const logLocal = JSON.parse(localStorage.getItem(`nutricalc_log_${fechaAyerStr}`));
-            if (logLocal && logLocal.alimentosConsumidos) {
-                alimentosDeAyer = logLocal.alimentosConsumidos;
-            }
-        }
-
-        if (alimentosDeAyer.length === 0) {
-            alert(`💡 No hay registros de ayer (${fechaAyerStr}) para poder copiar.`);
-            return;
-        }
-
-        // Filtrar por la categoría seleccionada (ej: Desayuno)
-        const clonados = alimentosDeAyer.filter(item => item.comida === categoria);
-
-        if (clonados.length === 0) {
-            alert(`📋 Ayer (${fechaAyerStr}) no registraste nada en: ${categoria}`);
-            return;
-        }
-
-        // Duplicar elementos generando nuevos ID únicos y sumando macros al día actual
-        clonados.forEach(item => {
-            const copia = {
-                id_interno: Date.now() + Math.random(),
-                nombre: item.nombre,
-                cantidad: Number(item.cantidad),
-                calorias: Number(item.calorias),
-                proteinas: Number(item.proteinas),
-                comida: categoria
-            };
-            alimentosConsumidos.push(copia);
-            consumidoCalorias += copia.calorias;
-            consumidoProteinas += copia.proteinas;
-        });
-
-        // Guardar cambios en local/nube y refrescar la pantalla
-        await actualizarInterfaz(true);
-        alert(`✅ ¡Copiado con éxito el bloque de ${categoria} de ayer!`);
-
-    } catch (err) {
-        console.error("Error al clonar:", err);
-        alert("Hubo un problema inesperado al clonar los alimentos.");
-    }
-}
-
-
-
-
-
-
 // -- FUNCIÓN DE INTERFAZ Y GUARDADO (ADAPTADA CON GRUPOS Y BARRAS) ---
 async function actualizarInterfaz(guardarEnSupabase = false) {
     // 1. Pintamos los textos y barras
@@ -445,20 +423,14 @@ async function actualizarInterfaz(guardarEnSupabase = false) {
                 btnClonar.style.padding = '2px 8px';
                 btnClonar.style.fontSize = '0.75rem';
                 btnClonar.style.border = '1px solid var(--border)';
-                btnClonar.onclick = () => window.clonarComidaDeAyer(cat); // <-- Cambiado para asegurar el enlace global
+                btnClonar.onclick = () => clonarComidaDeAyer(cat);
                 cabecera.appendChild(btnClonar);
             }
             divCat.appendChild(cabecera);
 
             // Lista de alimentos de esta categoría
             if (itemsCat.length === 0) {
-                const pVacio = document.createElement('p');
-                pVacio.style.fontSize = '0.85rem';
-                pVacio.style.color = 'var(--text-muted)';
-                pVacio.style.fontStyle = 'italic';
-                pVacio.style.margin = '0 0 0 10px';
-                pVacio.textContent = 'Vacío';
-                divCat.appendChild(pVacio);
+                divCat.innerHTML += `<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin: 0 0 0 10px;">Vacío</p>`;
             } else {
                 itemsCat.forEach(alimento => {
                     const li = document.createElement('div');
@@ -799,6 +771,60 @@ async function eliminarAlimentoPorId(idObtenido) {
     }
 }
 
+// --- FUNCIÓN CLONAR (ADAPTADA A TU CÓDIGO) ---
+async function clonarComidaDeAyer(categoria) {
+    if (!isSupabaseConfigured) return;
+
+    // Calculamos ayer
+    const fechaObj = new Date(fechaSeleccionada);
+    fechaObj.setDate(fechaObj.getDate() - 1);
+    const yyyy = fechaObj.getFullYear();
+    const mm = String(fechaObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(fechaObj.getDate()).padStart(2, '0');
+    const fechaAyerStr = `${yyyy}-${mm}-${dd}`;
+
+    try {
+        const { data: s } = await supabaseClient.auth.getSession();
+        if (!s || !s.session) return;
+        const userId = s.session.user.id;
+
+        // Buscamos ayer en tu tabla 'diarios'
+        const { data, error } = await supabaseClient
+            .from('diarios')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('fecha', fechaAyerStr)
+            .single();
+
+        if (error || !data || !data.datos || !data.datos.alimentosConsumidos) {
+            alert(`No se encontraron registros en el día de ayer.`);
+            return;
+        }
+
+        // Filtramos la comida elegida (ej. Desayuno)
+        const alimentosDeAyer = data.datos.alimentosConsumidos;
+        const clonados = alimentosDeAyer.filter(item => item.comida === categoria);
+
+        if (clonados.length === 0) {
+            alert(`Ayer no registraste nada en: ${categoria}`);
+            return;
+        }
+
+        // Los añadimos al día actual generando un ID nuevo a cada uno
+        clonados.forEach(item => {
+            const copia = { ...item, id_interno: Date.now() + Math.random() };
+            alimentosConsumidos.push(copia);
+            consumidoCalorias += copia.calorias;
+            consumidoProteinas += copia.proteinas;
+        });
+
+        // Como usamos tu función actualizarInterfaz(true), esto ya invoca tu syncLogToCloud automático
+        await actualizarInterfaz(true);
+
+    } catch (err) {
+        console.error("Error al clonar:", err);
+    }
+}
 
 
 
