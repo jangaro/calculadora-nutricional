@@ -91,11 +91,11 @@
 
     <script>
         // Determinar si Supabase está correctamente configurado
-        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && 
-                                     typeof SUPABASE_ANON_KEY !== 'undefined' && 
-                                     SUPABASE_URL !== "TU_SUPABASE_URL" && 
-                                     SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" && 
-                                     supabaseClient !== null;
+        const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' &&
+            typeof SUPABASE_ANON_KEY !== 'undefined' &&
+            SUPABASE_URL !== "TU_SUPABASE_URL" &&
+            SUPABASE_ANON_KEY !== "TU_SUPABASE_ANON_KEY" &&
+            supabaseClient !== null;
 
         let currentUser = null;
 
@@ -114,7 +114,7 @@
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
-            
+
             fechas.push(`${yyyy}-${mm}-${dd}`);
             nombresDias.push(`${diasSemana[d.getDay()]} ${dd}/${mm}`);
         }
@@ -131,7 +131,7 @@
                     return;
                 }
             }
-            
+
             // Cargar y procesar datos semanales
             await procesarTendenciasSemanales();
         }
@@ -166,9 +166,9 @@
 
             // Mapear logs unificando base de datos y local caché
             const logs = fechas.map(fecha => {
-                return logsMap[fecha] || 
-                       JSON.parse(localStorage.getItem(`nutricalc_log_${fecha}`)) || 
-                       { consumidoCalorias: 0, consumidoProteinas: 0, alimentosConsumidos: [] };
+                return logsMap[fecha] ||
+                    JSON.parse(localStorage.getItem(`nutricalc_log_${fecha}`)) ||
+                    { consumidoCalorias: 0, consumidoProteinas: 0, alimentosConsumidos: [] };
             });
 
             // Calcular Métricas
@@ -265,7 +265,7 @@
                         rect.setAttribute("height", h);
                         rect.setAttribute("rx", 4);
                         rect.setAttribute("ry", 4);
-                        
+
                         const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
                         title.textContent = `${nombresDias[index]}: ${Math.round(valor)}${keyLog === 'consumidoCalorias' ? ' kcal' : ' g'}`;
                         rect.appendChild(title);

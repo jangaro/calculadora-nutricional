@@ -691,29 +691,41 @@ async function inicializarApp() {
 // --- CONTROLADOR DE VISTAS ACTUALIZADO (AJUSTADO PARA FLEXBOX) ---
 const btnVistaDiario = document.getElementById('btn-vista-diario');
 const btnVistaDatos = document.getElementById('btn-vista-datos');
+const btnVistaCompra = document.getElementById('btn-vista-compra');
 const vistaDiario = document.getElementById('vista-diario');
 const vistaDatos = document.getElementById('vista-datos');
+const vistaCompra = document.getElementById('vista-compra');
 
-btnVistaDiario.addEventListener('click', () => {
-    vistaDiario.style.display = 'grid';
-    vistaDatos.style.display = 'none';
+if (btnVistaDiario && btnVistaCompra && btnVistaDatos) {
+    btnVistaDiario.addEventListener('click', () => {
+        vistaDiario.style.display = 'grid';
+        vistaCompra.style.display = 'none';
+        vistaDatos.style.display = 'none';
+        btnVistaDiario.className = 'btn-blue';
+        btnVistaCompra.className = 'logout-btn'; btnVistaCompra.style.background = 'transparent';
+        btnVistaDatos.className = 'logout-btn'; btnVistaDatos.style.background = 'transparent';
+    });
 
-    // Estilo activo para Diario, transparente para Perfil
-    btnVistaDiario.className = 'btn-blue';
-    btnVistaDatos.className = 'logout-btn';
-    btnVistaDatos.style.background = 'transparent';
-});
+    btnVistaCompra.addEventListener('click', () => {
+        vistaDiario.style.display = 'none';
+        vistaCompra.style.display = 'flex';
+        vistaDatos.style.display = 'none';
+        btnVistaCompra.className = 'btn-blue';
+        btnVistaDiario.className = 'logout-btn'; btnVistaDiario.style.background = 'transparent';
+        btnVistaDatos.className = 'logout-btn'; btnVistaDatos.style.background = 'transparent';
+        // Cada vez que entramos a la vista, renderizamos la lista actualizada
+        renderizarListaCompra();
+    });
 
-btnVistaDatos.addEventListener('click', () => {
-    vistaDiario.style.display = 'none';
-    vistaDatos.style.display = 'flex'; // ¡Cambiado de 'block' a 'flex' para activar el gap!
-
-    // Estilo activo para Perfil, transparente para Diario
-    btnVistaDatos.className = 'btn-blue';
-    btnVistaDiario.className = 'logout-btn';
-    btnVistaDiario.style.background = 'transparent';
-});
-
+    btnVistaDatos.addEventListener('click', () => {
+        vistaDiario.style.display = 'none';
+        vistaCompra.style.display = 'none';
+        vistaDatos.style.display = 'flex';
+        btnVistaDatos.className = 'btn-blue';
+        btnVistaDiario.className = 'logout-btn'; btnVistaDiario.style.background = 'transparent';
+        btnVistaCompra.className = 'logout-btn'; btnVistaCompra.style.background = 'transparent';
+    });
+}
 // --- GESTIÓN DE CAMBIO DE CONTRASEÑA EN LA NUBE ---
 const passwordForm = document.getElementById('password-form');
 const nuevaPasswordInput = document.getElementById('nueva-password');
@@ -799,7 +811,68 @@ async function eliminarAlimentoPorId(idObtenido) {
     }
 }
 
+// --- LÓGICA DE LA LISTA DE LA COMPRA ---
+function renderizarListaCompra() {
+    const contenedor = document.getElementById('lista-compra-items');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
 
+    // Recuperamos la lista de cosas pendientes guardadas del LocalStorage
+    const itemsFaltantes = JSON.parse(localStorage.getItem('nutricalc_compra_faltantes')) || [];
+
+    // Iteramos sobre todos los alimentos que la app conoce (por defecto + personalizados)
+    todosLosAlimentosGlobal.forEach((alimento) => {
+        const estaMarcado = itemsFaltantes.includes(alimento.nombre);
+
+        // Crear la fila del alimento
+        const itemDiv = document.createElement('div');
+        itemDiv.style.display = 'flex';
+        itemDiv.style.alignItems = 'center';
+        itemDiv.style.justifyContent = 'space-between';
+        itemDiv.style.padding = '12px';
+        itemDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+        itemDiv.style.borderRadius = 'var(--radius-md)';
+        itemDiv.style.border = estaMarcado ? '1px solid var(--primary)' : '1px solid transparent';
+        itemDiv.style.transition = 'all 0.2s ease';
+
+        // Estructura interna: Texto a la izquierda, Checkbox a la derecha
+        itemDiv.innerHTML = `
+            <span style="font-weight: 600; color: ${estaMarcado ? 'var(--primary)' : 'var(--text-color)'}; text-decoration: ${estaMarcado ? 'line-through' : 'none'}">
+                ${alimento.nombre}
+            </span>
+            <label class="switch" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: bold;">
+                    ${estaMarcado ? '⚠️ FALTA' : '✅ EN DESPENSA'}
+                </span>
+                <input type="checkbox" ${estaMarcado ? 'checked' : ''} 
+                    style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" 
+                    onchange="alternarItemCompra('${alimento.nombre}', this.checked)">
+            </label>
+        `;
+
+        contenedor.appendChild(itemDiv);
+    });
+}
+
+window.alternarItemCompra = function (nombreAlimento, checkeado) {
+    let itemsFaltantes = JSON.parse(localStorage.getItem('nutricalc_compra_faltantes')) || [];
+
+    if (checkeado) {
+        // Si lo tica, significa que "le falta" -> se añade a la lista
+        if (!itemsFaltantes.includes(nombreAlimento)) {
+            itemsFaltantes.push(nombreAlimento);
+        }
+    } else {
+        // Si le quita la marca, significa que ya lo compró -> se retira de la lista
+        itemsFaltantes = itemsFaltantes.filter(item => item !== nombreAlimento);
+    }
+
+    // Guardamos el estado para que no se borre al cerrar o refrescar la web
+    localStorage.setItem('nutricalc_compra_faltantes', JSON.stringify(itemsFaltantes));
+
+    // Refrescamos visualmente los estilos de la lista
+    renderizarListaCompra();
+}
 
 
 // ¡Arrancamos la aplicación limpia!
