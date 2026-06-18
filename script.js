@@ -72,7 +72,11 @@ if (isSupabaseConfigured) {
             document.getElementById('app-section').style.display = 'none';
             document.getElementById('user-badge').style.display = 'none';
 
-            limpiarCachéLocal();
+            // Solo limpiamos la caché local si el usuario explícitamente cerró sesión (SIGNED_OUT)
+            // para evitar borrar los datos durante el estado de carga inicial (INITIAL_SESSION con session null)
+            if (event === 'SIGNED_OUT') {
+                limpiarCachéLocal();
+            }
         }
     });
 } else {
@@ -156,54 +160,61 @@ function limpiarCachéLocal() {
 // --- Carga y Sincronización de Datos ---
 
 async function inicializarDatosDesdeSupabase(userId) {
-    // 1. Cargar Perfil de usuario (peso y metas)
-    const { data: perfil, error: errPerfil } = await supabaseClient
-        .from('perfiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    try {
+        // 1. Cargar Perfil de usuario (peso y metas)
+        const { data: perfil, error: errPerfil } = await supabaseClient
+            .from('perfiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
 
-    if (perfil) {
-        peso = Number(perfil.peso);
-        metaCalorias = Number(perfil.meta_calorias);
-        metaProteinas = Number(perfil.meta_proteinas);
+        if (perfil) {
+            peso = Number(perfil.peso);
+            metaCalorias = Number(perfil.meta_calorias);
+            metaProteinas = Number(perfil.meta_proteinas);
 
-        localStorage.setItem('peso', peso);
-        localStorage.setItem('metaCalorias', metaCalorias);
-        localStorage.setItem('metaProteinas', metaProteinas);
+            localStorage.setItem('peso', peso);
+            localStorage.setItem('metaCalorias', metaCalorias);
+            localStorage.setItem('metaProteinas', metaProteinas);
 
-        document.getElementById('peso').value = peso;
-        document.getElementById('objetivo-cal').value = metaCalorias;
-    } else if (errPerfil && errPerfil.code === "PGRST116") {
-        // No existe perfil, lo creamos con valores actuales
-        await supabaseClient.from('perfiles').insert({
-            id: userId,
-            peso: peso,
-            meta_calorias: metaCalorias,
-            meta_proteinas: metaProteinas
-        });
+            document.getElementById('peso').value = peso;
+            document.getElementById('objetivo-cal').value = metaCalorias;
+        } else if (errPerfil && errPerfil.code === "PGRST116") {
+            // No existe perfil, lo creamos con valores actuales
+            await supabaseClient.from('perfiles').insert({
+                id: userId,
+                peso: peso,
+                meta_calorias: metaCalorias,
+                meta_proteinas: metaProteinas
+            });
+        }
+
+        // 2. Cargar Alimentos Personalizados
+        const { data: alimentosCloud } = await supabaseClient
+            .from('alimentos_personalizados')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (alimentosCloud) {
+            const personalizados = alimentosCloud.map(a => ({
+                nombre: a.nombre,
+                calorias: Number(a.calorias),
+                proteinas: Number(a.proteinas)
+            }));
+            localStorage.setItem('alimentosPersonalizados', JSON.stringify(personalizados));
+        }
+
+        // Refrescar selector de alimentos
+        cargarAlimentos();
+
+        // 3. Cargar consumos del día seleccionado
+        await cargarDatosDeFecha(fechaSeleccionada);
+    } catch (err) {
+        console.error("Error al inicializar datos desde Supabase:", err);
+        // Fallback: cargar de localStorage
+        cargarAlimentos();
+        await cargarDatosDeFecha(fechaSeleccionada);
     }
-
-    // 2. Cargar Alimentos Personalizados
-    const { data: alimentosCloud } = await supabaseClient
-        .from('alimentos_personalizados')
-        .select('*')
-        .eq('user_id', userId);
-
-    if (alimentosCloud) {
-        const personalizados = alimentosCloud.map(a => ({
-            nombre: a.nombre,
-            calorias: Number(a.calorias),
-            proteinas: Number(a.proteinas)
-        }));
-        localStorage.setItem('alimentosPersonalizados', JSON.stringify(personalizados));
-    }
-
-    // Refrescar selector de alimentos
-    cargarAlimentos();
-
-    // 3. Cargar consumos del día seleccionado
-    await cargarDatosDeFecha(fechaSeleccionada);
 }
 
 async function syncLogToCloud(userId, fecha, logDia) {
@@ -607,24 +618,28 @@ async function cargarDatosDeFecha(fecha) {
     let logDia = null;
 
     if (isSupabaseConfigured) {
-        const { data: s } = await supabaseClient.auth.getSession();
-        if (s && s.session) {
-            const userId = s.session.user.id;
-            const { data: logCloud } = await supabaseClient
-                .from('registros_diarios')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('fecha', fecha)
-                .maybeSingle();
+        try {
+            const { data: s } = await supabaseClient.auth.getSession();
+            if (s && s.session) {
+                const userId = s.session.user.id;
+                const { data: logCloud } = await supabaseClient
+                    .from('registros_diarios')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('fecha', fecha)
+                    .maybeSingle();
 
-            if (logCloud) {
-                logDia = {
-                    consumidoCalorias: Number(logCloud.consumido_calorias),
-                    consumidoProteinas: Number(logCloud.consumido_proteinas),
-                    alimentosConsumidos: logCloud.alimentos_consumidos || []
-                };
-                localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
+                if (logCloud) {
+                    logDia = {
+                        consumidoCalorias: Number(logCloud.consumido_calorias),
+                        consumidoProteinas: Number(logCloud.consumido_proteinas),
+                        alimentosConsumidos: logCloud.alimentos_consumidos || []
+                    };
+                    localStorage.setItem(`nutricalc_log_${fecha}`, JSON.stringify(logDia));
+                }
             }
+        } catch (err) {
+            console.error("Error al cargar datos de Supabase:", err);
         }
     }
 
@@ -676,14 +691,11 @@ fechaSeleccionada = fechaHoy;
 async function inicializarApp() {
     cargarAlimentos();
 
-    if (isSupabaseConfigured) {
-        const { data: s } = await supabaseClient.auth.getSession();
-        if (s && s.session) {
-            await cargarDatosDeFecha(fechaSeleccionada);
-            return;
-        }
+    // Si Supabase no está configurado, cargamos los datos locales directamente.
+    // Si Supabase está configurado, la carga se gestiona en onAuthStateChange para evitar condiciones de carrera.
+    if (!isSupabaseConfigured) {
+        await cargarDatosDeFecha(fechaSeleccionada);
     }
-    await cargarDatosDeFecha(fechaSeleccionada);
 }
 
 
